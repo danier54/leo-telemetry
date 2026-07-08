@@ -25,7 +25,7 @@ to the next.
 
 ## Ownership
 
-| Track | Package |
+| Domain | Package |
 |---|---|
 | Data Ingest & Queue Management | `leo_telemetry/ingest` |
 | Signal Processing & Protocol Decoding | `leo_telemetry/decode` |
