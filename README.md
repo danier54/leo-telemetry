@@ -32,8 +32,6 @@ to the next.
 | Telemetry Demultiplexing | `leo_telemetry/demux` |
 | Observability & Visualization | `leo_telemetry/observability` |
 
-`leo_telemetry/scoring` (the health assessment engine) is cross-cutting and
-not owned by a single track.
 
 ## Setup
 
