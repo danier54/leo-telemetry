@@ -10,10 +10,9 @@ SatNOGS and pushes new frames into it.
 kubectl apply -f ../argocd/ingest-application.yaml
 ```
 
-ArgoCD auto-detects this as a Helm chart (via `Chart.yaml`), creates the
-`leo-telemetry` namespace, and renders/syncs it using `values.yaml`
-automatically, keeping it in sync (prune + self-heal) on every push to
-`main`.
+ArgoCD auto-detects this as a Helm chart (via `Chart.yaml`) and
+renders/syncs it using `values.yaml` automatically, keeping it in sync
+(prune + self-heal) on every push to `main`.
 
 ## How deploys happen
 
