@@ -16,6 +16,10 @@ leo_telemetry/
   observability/   Prometheus exporter + Skyfield orbital tracking
   scoring/         composite "mission readiness score" (cross-cutting)
 tests/             mirrors the package layout above
+deploy/
+  ingest/          k8s manifests for the ingest service (see deploy/ingest/README.md)
+  argocd/          ArgoCD Application pointing at deploy/ingest
+.github/workflows/ CI: builds and pushes the ingest image to ghcr.io on push to main
 ```
 
 Data flows: `ingest -> RawFrame -> decode -> DecodedFrame -> demux -> TelemetryReading -> observability/scoring`.

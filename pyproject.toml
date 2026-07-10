@@ -20,7 +20,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
+    "fakeredis>=2.23",
 ]
 
 [tool.setuptools.packages.find]
@@ -28,3 +30,4 @@ include = ["leo_telemetry*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
