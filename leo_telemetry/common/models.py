@@ -10,6 +10,7 @@ should be agreed on by both the producing and consuming track owners.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -30,8 +31,14 @@ class RawFrame:
 
     @property
     def dedup_key(self) -> str:
-        """Stable key used to drop duplicate captures from overlapping ground stations."""
-        return f"{self.norad_id}:{self.observation_id}:{hash(self.raw_bytes)}"
+        """Stable key used to drop duplicate captures from overlapping ground stations.
+
+        Uses sha256 rather than the builtin `hash()`, which is seeded
+        randomly per process and would otherwise make every frame look
+        "new" again after each restart.
+        """
+        digest = hashlib.sha256(self.raw_bytes).hexdigest()
+        return f"{self.norad_id}:{self.observation_id}:{digest}"
 
 
 @dataclass(frozen=True)
