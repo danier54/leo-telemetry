@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingest-config
+  namespace: leo-telemetry
+data:
+  NORAD_IDS: "60525,68458,31130"
+  POLL_INTERVAL_SECONDS: "300"
+  MIN_REQUEST_INTERVAL_SECONDS: "5"
+  REDIS_URL: "redis://ingest-redis:6379/0"
+  LOG_LEVEL: "INFO"
