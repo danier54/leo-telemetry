@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingest-config
+  namespace: leo-telemetry
+  labels:
+    {{- include "ingest.labels" . | nindent 4 }}
+data:
+  NORAD_IDS: {{ .Values.config.noradIds | quote }}
+  POLL_INTERVAL_SECONDS: {{ .Values.config.pollIntervalSeconds | quote }}
+  MIN_REQUEST_INTERVAL_SECONDS: {{ .Values.config.minRequestIntervalSeconds | quote }}
+  REDIS_URL: "redis://ingest-redis:6379/0"
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
