@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 from datetime import datetime
 
@@ -71,7 +70,7 @@ class SatNOGSClient:
     async def _poll_one(self, norad_id: int) -> list[RawFrame]:
         await self._limiter.wait()
         headers = {"Authorization": f"Token {self.api_token}"} if self.api_token else {}
-        params = {"norad_cat_id": norad_id, "format": "json", "page_size": self.page_size}
+        params = {"satellite": norad_id, "format": "json", "page_size": self.page_size}
 
         response = await self._client.get(self.base_url, params=params, headers=headers)
 
@@ -82,16 +81,17 @@ class SatNOGSClient:
             response = await self._client.get(self.base_url, params=params, headers=headers)
 
         response.raise_for_status()
-        return [self._to_raw_frame(norad_id, entry) for entry in response.json()]
+        results = response.json().get("results") or []
+        return [self._to_raw_frame(norad_id, entry) for entry in results]
 
     @staticmethod
     def _to_raw_frame(norad_id: int, entry: dict) -> RawFrame:
-        frame_b64 = entry.get("frame") or ""
+        frame_hex = entry.get("frame") or ""
         timestamp = entry["timestamp"].replace("Z", "+00:00")
         return RawFrame(
             norad_id=norad_id,
-            observation_id=entry["id"],
-            observer_station_id=entry.get("station") or 0,
+            observation_id=entry.get("observation_id") or -1,
+            observer_station_id=entry.get("station_id") or 0,
             received_at=datetime.fromisoformat(timestamp),
-            raw_bytes=base64.b64decode(frame_b64) if frame_b64 else b"",
+            raw_bytes=bytes.fromhex(frame_hex) if frame_hex else b"",
         )

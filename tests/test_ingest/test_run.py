@@ -1,5 +1,3 @@
-import base64
-
 import httpx
 from fakeredis import FakeAsyncRedis
 
@@ -9,18 +7,20 @@ from leo_telemetry.ingest.run import _norad_ids_from_env, _poll_once
 
 
 def _telemetry_response(request: httpx.Request) -> httpx.Response:
-    norad_id = int(request.url.params["norad_cat_id"])
+    norad_id = int(request.url.params["satellite"])
     return httpx.Response(
         200,
-        json=[
-            {
-                "id": 1,
-                "norad_cat_id": norad_id,
-                "station": 42,
-                "timestamp": "2026-07-09T12:00:00Z",
-                "frame": base64.b64encode(b"\x7e\x00\x01\x7e").decode(),
-            }
-        ],
+        json={
+            "results": [
+                {
+                    "observation_id": 1,
+                    "norad_cat_id": norad_id,
+                    "station_id": 42,
+                    "timestamp": "2026-07-09T12:00:00Z",
+                    "frame": b"\x7e\x00\x01\x7e".hex(),
+                }
+            ]
+        },
     )
 
 
