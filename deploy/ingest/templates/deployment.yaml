@@ -4,6 +4,7 @@ metadata:
   name: ingest
   namespace: leo-telemetry
   labels:
+    {{- include "ingest.labels" . | nindent 4 }}
     app: ingest
 spec:
   replicas: 1
@@ -15,12 +16,12 @@ spec:
       labels:
         app: ingest
     spec:
-      # If ghcr.io/<owner>/leo-telemetry-ingest is private, add:
+      # If {{ .Values.image.repository }} is private, add:
       #   imagePullSecrets:
       #     - name: ghcr-pull-secret
       containers:
         - name: ingest
-          image: ghcr.io/danier54/leo-telemetry-ingest:latest
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           envFrom:
             - configMapRef:
                 name: ingest-config
@@ -32,9 +33,4 @@ spec:
                   key: satnogs-api-token
                   optional: true
           resources:
-            requests:
-              cpu: 25m
-              memory: 64Mi
-            limits:
-              cpu: 250m
-              memory: 256Mi
+            {{- toYaml .Values.resources | nindent 12 }}

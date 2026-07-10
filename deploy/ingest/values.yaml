@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/danier54/leo-telemetry-ingest
+  tag: latest
+
+config:
+  noradIds: "60525,68458,31130"
+  pollIntervalSeconds: "300"
+  minRequestIntervalSeconds: "5"
+  logLevel: "INFO"
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+redis:
+  image: redis:7-alpine
+  storageSize: 1Gi
+  storageClassName: local-path
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
