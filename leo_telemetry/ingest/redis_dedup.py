@@ -20,17 +20,33 @@ class RedisDedupQueue:
     consumer (decode) are Python services sharing this codebase.
     """
 
-    def __init__(self, redis_client: Redis, *, seen_ttl_seconds: int = 7 * 24 * 3600):
+    def __init__(
+        self,
+        redis_client: Redis,
+        *,
+        seen_ttl_seconds: int = 7 * 24 * 3600,
+        max_queue_size: int = 5000,
+    ):
         self._redis = redis_client
         self._seen_ttl_seconds = seen_ttl_seconds
+        self._max_queue_size = max_queue_size
 
     async def push(self, frame: RawFrame) -> bool:
-        """Add a frame if unseen. Returns True if it was added."""
+        """Add a frame if unseen. Returns True if it was added.
+
+        The seen-set's TTL is set once (`nx=True`) rather than refreshed on
+        every push, so it actually rolls off `seen_ttl_seconds` after first
+        use instead of being extended forever by a steady trickle of new
+        frames. The queue is trimmed to `max_queue_size`, dropping the
+        oldest entries first, so it can't grow without bound while no
+        consumer is draining it.
+        """
         added = await self._redis.sadd(SEEN_KEY, frame.dedup_key)
         if not added:
             return False
-        await self._redis.expire(SEEN_KEY, self._seen_ttl_seconds)
+        await self._redis.expire(SEEN_KEY, self._seen_ttl_seconds, nx=True)
         await self._redis.rpush(QUEUE_KEY, pickle.dumps(frame))
+        await self._redis.ltrim(QUEUE_KEY, -self._max_queue_size, -1)
         return True
 
     async def pop(self) -> RawFrame | None:
