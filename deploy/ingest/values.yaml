@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/danier54/leo-telemetry-ingest
-  tag: 12760687769664fa4e4915439e681fde3e310e50
+  tag: e76b9bfbf3689e409b3ab54a1fee1fb274dcf883
 config:
   noradIds: "60525,68458,31130"
   pollIntervalSeconds: "300"
