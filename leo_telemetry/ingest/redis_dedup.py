@@ -56,3 +56,12 @@ class RedisDedupQueue:
 
     async def qsize(self) -> int:
         return await self._redis.llen(QUEUE_KEY)
+
+    async def peek_all(self) -> list[RawFrame]:
+        """Return every currently queued frame without removing them.
+
+        Not part of the normal push/pop consumer flow -- used for one-off
+        operations like backfilling the Postgres historical archive.
+        """
+        raw_items = await self._redis.lrange(QUEUE_KEY, 0, -1)
+        return [pickle.loads(raw) for raw in raw_items]
