@@ -4,6 +4,10 @@ A Helm chart for the Data Ingest & Queue Management service: a
 Redis-backed dedup queue plus a long-running Deployment that polls
 SatNOGS and pushes new frames into it.
 
+For day-to-day commands to check on the running pipeline (pod health,
+logs, queue depth, Postgres row counts, ArgoCD sync status), see
+[`KUBECTL_CHEATSHEET.md`](./KUBECTL_CHEATSHEET.md).
+
 ## Bringing it up via ArgoCD
 
 ```

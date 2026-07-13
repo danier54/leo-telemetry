@@ -17,7 +17,8 @@ leo_telemetry/
   scoring/         composite "mission readiness score" (cross-cutting)
 tests/             mirrors the package layout above
 deploy/
-  ingest/          k8s manifests for the ingest service (see deploy/ingest/README.md)
+  ingest/          k8s manifests for the ingest service (see deploy/ingest/README.md,
+                    and deploy/ingest/KUBECTL_CHEATSHEET.md for day-to-day kubectl commands)
   argocd/          ArgoCD Application pointing at deploy/ingest
 .github/workflows/ CI: builds and pushes the ingest image to ghcr.io on push to main
 ```
