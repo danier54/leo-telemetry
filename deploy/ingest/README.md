@@ -8,6 +8,48 @@ For day-to-day commands to check on the running pipeline (pod health,
 logs, queue depth, Postgres row counts, ArgoCD sync status), see
 [`KUBECTL_CHEATSHEET.md`](./KUBECTL_CHEATSHEET.md).
 
+## Next steps for Signal Processing / decode (Jordan)
+
+**Your primary input is the Redis queue, not Postgres.** Ingest pushes
+every deduped `RawFrame` onto a Redis FIFO as its normal, real-time
+hand-off to decode -- this is the "Ingest -> Signal Processing" contract
+from the project plan's dependencies section, and it's already stable and
+running live.
+
+1. Consume frames with `leo_telemetry.ingest.redis_dedup.RedisDedupQueue`:
+   ```python
+   from redis.asyncio import Redis
+   from leo_telemetry.ingest.redis_dedup import RedisDedupQueue
+
+   queue = RedisDedupQueue(Redis.from_url("redis://ingest-redis:6379/0"))  # in-cluster
+   frame = await queue.pop()  # RawFrame | None, oldest first
+   ```
+   For local development, port-forward first (see
+   [`KUBECTL_CHEATSHEET.md`](./KUBECTL_CHEATSHEET.md#redis-queue)) and
+   point `Redis.from_url` at `redis://localhost:6379/0` instead.
+2. `RawFrame` (the type you'll get back) is defined in
+   `leo_telemetry/common/models.py` -- read its docstring before writing
+   against it, since it's the interface boundary between our two tracks.
+3. Your own package already has a stubbed-out entry point to build
+   against: `leo_telemetry/decode/ax25.py`'s `decode_frame(raw: RawFrame)
+   -> DecodedFrame | None` calls into `frame_sync.py` (frame boundary
+   detection + bit-destuffing) and `crc16.py` (FCS validation), both
+   currently `raise NotImplementedError`. Your output type, `DecodedFrame`,
+   is also in `common/models.py` and is what gets handed to Taurean's demux
+   track next.
+4. Tracked as issues
+   [#13](https://github.com/danier54/leo-telemetry/issues/13),
+   [#14](https://github.com/danier54/leo-telemetry/issues/14),
+   [#15](https://github.com/danier54/leo-telemetry/issues/15), and
+   [#16](https://github.com/danier54/leo-telemetry/issues/16) on the
+   [project board](https://github.com/users/danier54/projects/5).
+
+**Postgres is a secondary, optional replay archive** -- see "Postgres
+historical archive" below. Use it only if you want to re-run your decoder
+against frames that already scrolled past on the live queue (e.g. for
+testing against real historical data); it is not part of the normal
+ingest -> decode pipeline path, which is why access to it is read-only.
+
 ## Bringing it up via ArgoCD
 
 ```
@@ -71,14 +113,16 @@ kubectl create secret generic ingest-postgres-secrets \
   -n leo-telemetry
 ```
 
-## Postgres historical archive (contract for Signal Processing / decode)
+## Postgres historical archive (optional replay access for Signal Processing / decode)
 
 In addition to the live Redis FIFO queue, every dedup'd raw frame is also
 written to a Postgres database (`ingest-postgres` in the `leo-telemetry`
 namespace) as a durable historical record -- see the "Data Storage
 Architecture" section of the project plan for why this exists alongside
-Prometheus. This is what Signal Processing/decode should read from if you
-want to replay or re-process frames independent of the live queue.
+Prometheus. This is *not* the primary ingest -> decode hand-off (that's
+the Redis queue, see "Next steps for Signal Processing / decode" above);
+it's here for replaying or re-processing frames independent of the live
+queue, which is also why decode's access to it is read-only.
 
 **Schema** (database `leo_telemetry`, table `raw_frames`):
 
