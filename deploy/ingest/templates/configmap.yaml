@@ -10,4 +10,8 @@ data:
   POLL_INTERVAL_SECONDS: {{ .Values.config.pollIntervalSeconds | quote }}
   MIN_REQUEST_INTERVAL_SECONDS: {{ .Values.config.minRequestIntervalSeconds | quote }}
   REDIS_URL: "redis://ingest-redis:6379/0"
+  POSTGRES_HOST: "ingest-postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: {{ .Values.postgres.dbName | quote }}
+  POSTGRES_USER: {{ .Values.postgres.appUser | quote }}
   LOG_LEVEL: {{ .Values.config.logLevel | quote }}

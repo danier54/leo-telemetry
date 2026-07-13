@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingest-postgres
+  namespace: leo-telemetry
+  labels:
+    {{- include "ingest.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: ingest-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

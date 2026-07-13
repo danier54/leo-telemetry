@@ -15,6 +15,7 @@ dependencies = [
     "kaitaistruct>=0.10",
     "skyfield>=1.49",
     "prometheus-client>=0.20",
+    "psycopg[binary]>=3.2",
 ]
 
 [project.optional-dependencies]

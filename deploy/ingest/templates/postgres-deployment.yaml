@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest-postgres
+  namespace: leo-telemetry
+  labels:
+    {{- include "ingest.labels" . | nindent 4 }}
+    app: ingest-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ingest-postgres
+  template:
+    metadata:
+      labels:
+        app: ingest-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.dbName | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.appUser | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ingest-postgres-secrets
+                  key: app-password
+            - name: READONLY_USER
+              value: {{ .Values.postgres.readonlyUser | quote }}
+            - name: READONLY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ingest-postgres-secrets
+                  key: readonly-password
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ingest-postgres
+        - name: init-scripts
+          configMap:
+            name: ingest-postgres-init
+            defaultMode: 0755

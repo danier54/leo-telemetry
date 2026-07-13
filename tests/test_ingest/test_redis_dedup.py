@@ -56,6 +56,17 @@ async def test_queue_is_trimmed_to_max_size_dropping_oldest_first():
     assert (await queue.pop()).observation_id == 3
 
 
+async def test_peek_all_returns_queued_frames_without_removing_them():
+    queue = RedisDedupQueue(FakeAsyncRedis())
+    await queue.push(_frame(1))
+    await queue.push(_frame(2))
+
+    peeked = await queue.peek_all()
+
+    assert [frame.observation_id for frame in peeked] == [1, 2]
+    assert await queue.qsize() == 2
+
+
 async def test_seen_ttl_is_set_once_and_not_refreshed_on_later_pushes():
     redis_client = FakeAsyncRedis()
     queue = RedisDedupQueue(redis_client, seen_ttl_seconds=1000)
