@@ -1,9 +1,21 @@
 import httpx
 from fakeredis import FakeAsyncRedis
 
+from leo_telemetry.common.models import RawFrame
 from leo_telemetry.ingest.client import SatNOGSClient
 from leo_telemetry.ingest.redis_dedup import RedisDedupQueue
 from leo_telemetry.ingest.run import _norad_ids_from_env, _poll_once
+
+
+class FakeRawFrameStore:
+    """Records insert_frame calls without touching a real database."""
+
+    def __init__(self):
+        self.inserted: list[RawFrame] = []
+
+    async def insert_frame(self, frame: RawFrame) -> bool:
+        self.inserted.append(frame)
+        return True
 
 
 def _telemetry_response(request: httpx.Request) -> httpx.Response:
@@ -47,6 +59,19 @@ async def test_poll_once_pushes_new_frames_to_queue():
     await _poll_once(client, queue)
 
     assert await queue.qsize() == 1
+    await client.aclose()
+
+
+async def test_poll_once_persists_new_frames_to_store():
+    transport = httpx.MockTransport(_telemetry_response)
+    client = SatNOGSClient((60525,), min_interval_seconds=0)
+    client._client = httpx.AsyncClient(transport=transport)
+    queue = RedisDedupQueue(FakeAsyncRedis())
+    store = FakeRawFrameStore()
+
+    await _poll_once(client, queue, store)
+
+    assert len(store.inserted) == 1
     await client.aclose()
 
 
