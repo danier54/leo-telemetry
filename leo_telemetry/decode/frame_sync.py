@@ -10,7 +10,11 @@ def find_frame_boundaries(raw: bytes) -> list[tuple[int, int]]:
 
     Returns an empty list if no valid boundaries are found
     """
-    raise NotImplementedError
+    boundaries = []
+
+    for i in range(len(raw)):
+        print(i)
+    return boundaries
 
 
 def bit_destuff(bits: str) -> str:
@@ -19,4 +23,23 @@ def bit_destuff(bits: str) -> str:
 
     Raises ValueError if the input is malformed
     """
-    raise NotImplementedError
+    if not bits:
+        raise ValueError
+
+    if not all(b in "01" for b in bits):
+        raise ValueError
+
+    unstuffed = ""
+    ones = 0
+    for b in bits:
+        if b == "1":
+            ones += 1
+        elif ones == 5:
+            ones = 0
+            continue
+        else:
+            ones = 0
+        if ones > 5:
+            raise ValueError
+        unstuffed += b
+    return unstuffed
