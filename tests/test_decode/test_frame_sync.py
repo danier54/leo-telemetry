@@ -20,7 +20,7 @@ def test_bit_destuff():
         ['000000', '000000'],           # no stuff bits needed
 
         # Mixed
-        ['101010101010101010101010', '101010101010101010101010'],  # nostuffing
+        ['101010101010101010101010', '101010101010101010101010'],  # no stuff
 
         # Edge cases
         ['', ValueError],              # empty string (if your impl raises)
