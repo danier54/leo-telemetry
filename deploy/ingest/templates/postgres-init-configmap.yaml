@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingest-postgres-init
+  namespace: leo-telemetry
+  labels:
+    {{- include "ingest.labels" . | nindent 4 }}
+data:
+  01-create-readonly-role.sh: |
+    #!/bin/sh
+    set -eu
+
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        DO \$\$
+        BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${READONLY_USER}') THEN
+                CREATE ROLE "${READONLY_USER}" LOGIN PASSWORD '${READONLY_PASSWORD}';
+            END IF;
+        END
+        \$\$;
+
+        GRANT CONNECT ON DATABASE "${POSTGRES_DB}" TO "${READONLY_USER}";
+        GRANT USAGE ON SCHEMA public TO "${READONLY_USER}";
+
+        -- raw_frames doesn't exist yet at first boot (the ingest app creates
+        -- it on startup via RawFrameStore.ensure_schema), so grant SELECT on
+        -- anything the app user creates in the future rather than naming the
+        -- table here, avoiding an ordering dependency between the two.
+        ALTER DEFAULT PRIVILEGES FOR ROLE "${POSTGRES_USER}" IN SCHEMA public
+            GRANT SELECT ON TABLES TO "${READONLY_USER}";
+    EOSQL

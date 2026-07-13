@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ingest-postgres
+  namespace: leo-telemetry
+  labels:
+    {{- include "ingest.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.postgres.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.storageSize }}

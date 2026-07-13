@@ -32,5 +32,11 @@ spec:
                   name: ingest-secrets
                   key: satnogs-api-token
                   optional: true
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ingest-postgres-secrets
+                  key: app-password
+                  optional: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
