@@ -1,0 +1,29 @@
+{
+  "provenance": {
+    "source": "SatNOGS Network",
+    "observation_id": 13494726,
+    "observation_url": "https://network.satnogs.org/observations/13494726/",
+    "norad_id": 25544,
+    "satellite": "ISS",
+    "transmitter_description": "Mode V APRS",
+    "downlink_frequency_hz": 145825000,
+    "modulation": "AFSK",
+    "baud": 1200,
+    "captured_at": "2026-02-28T22:52:08Z",
+    "trimmed_from_seconds": 195,
+    "trimmed_duration_seconds": 50,
+    "decoder": "multimon-ng 1.3.0 (multimon-ng -t wav -a AFSK1200)",
+    "note": "Original ~6 minute recording trimmed to the window with reliable decodes, then re-encoded to Ogg Vorbis to keep the fixture small. Oracle packets below are multimon-ng's decoded output, not ours -- ground truth for the from-scratch AFSK1200/AX.25 pipeline to be checked against."
+  },
+  "sample_rate_hint_hz": 22050,
+  "packets": [
+    {"source": "JF6BCC-0", "destination": "CQ-0", "path": "ARISS-0", "payload": "CQ PM53 402103"},
+    {"source": "JF6BCC-0", "destination": "CQ-0", "path": "ARISS-0", "payload": "CQ PM53 402103"},
+    {"source": "JF6BCC-0", "destination": "CQ-0", "path": "ARISS-0", "payload": "CQ PM53 402103"},
+    {"source": "JF6BCC-0", "destination": "CQ-0", "path": "ARISS-0", "payload": "CQ PM53 402103"},
+    {"source": "JF6BCC-0", "destination": "CQ-0", "path": "ARISS-0", "payload": "CQ PM53 402103"},
+    {"source": "JF6BCC-0", "destination": "CQ-0", "path": "ARISS-0", "payload": "CQ PM53 402103"},
+    {"source": "JF6BCC-0", "destination": "CQ-0", "path": "ARISS-0", "payload": "CQ PM53 402103"},
+    {"source": "JF6BCC-0", "destination": "CQ-0", "path": "ARISS-0", "payload": "CQ PM53 402103"}
+  ]
+}
