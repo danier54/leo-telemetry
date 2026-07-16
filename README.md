@@ -12,6 +12,7 @@ leo_telemetry/
                     and target satellite config
   ingest/          SatNOGS polling client + dedup queue
   decode/          AX.25 frame sync, bit-destuffing, CRC-16 validation
+                    (+ afsk1200.py: audio demod for real off-air recordings)
   demux/           byte-offset -> physical unit mapping (per-satellite specs in demux/specs/)
   observability/   Prometheus exporter + Skyfield orbital tracking
   scoring/         composite "mission readiness score" (cross-cutting)
