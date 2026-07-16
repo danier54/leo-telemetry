@@ -4,6 +4,7 @@ Configured entirely via environment variables so it runs unmodified as a
 container:
 
     NORAD_IDS                    comma-separated NORAD IDs (default: the three target CubeSats)
+    AUDIO_NORAD_IDS              comma-separated NORAD IDs for raw audio polling (default: ISS)
     POLL_INTERVAL_SECONDS         seconds to sleep between poll cycles (default: 300)
     MIN_REQUEST_INTERVAL_SECONDS  minimum seconds between individual SatNOGS requests (default: 5)
     REDIS_URL                     Redis connection URL (default: redis://localhost:6379/0)
@@ -25,9 +26,11 @@ import signal
 
 from redis.asyncio import Redis
 
-from leo_telemetry.common.satellites import NORAD_IDS
+from leo_telemetry.common.satellites import AUDIO_NORAD_IDS, NORAD_IDS
 from leo_telemetry.common.storage import RawFrameStore
+from leo_telemetry.ingest.audio_client import SatNOGSAudioClient
 from leo_telemetry.ingest.client import SatNOGSClient
+from leo_telemetry.ingest.redis_audio_queue import RedisAudioQueue
 from leo_telemetry.ingest.redis_dedup import RedisDedupQueue
 
 logger = logging.getLogger(__name__)
@@ -37,6 +40,13 @@ def _norad_ids_from_env() -> tuple[int, ...]:
     raw = os.environ.get("NORAD_IDS")
     if not raw:
         return NORAD_IDS
+    return tuple(int(value.strip()) for value in raw.split(","))
+
+
+def _audio_norad_ids_from_env() -> tuple[int, ...]:
+    raw = os.environ.get("AUDIO_NORAD_IDS")
+    if not raw:
+        return AUDIO_NORAD_IDS
     return tuple(int(value.strip()) for value in raw.split(","))
 
 
@@ -87,6 +97,9 @@ async def run() -> None:
     queue = RedisDedupQueue(Redis.from_url(redis_url))
     store = await _connect_store()
 
+    audio_client = SatNOGSAudioClient(_audio_norad_ids_from_env())
+    audio_queue = RedisAudioQueue(Redis.from_url(redis_url))
+
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
@@ -95,12 +108,14 @@ async def run() -> None:
     try:
         while not stop_event.is_set():
             await _poll_once(client, queue, store)
+            await _poll_audio_once(audio_client, audio_queue)
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=poll_interval)
             except asyncio.TimeoutError:
                 pass
     finally:
         await client.aclose()
+        await audio_client.aclose()
         if store is not None:
             await store.close()
 
@@ -128,6 +143,20 @@ async def _poll_once(
                         "Failed to persist frame %s to Postgres archive", frame.dedup_key
                     )
     logger.info("Polled %d frame(s), %d new after dedup", len(frames), added)
+
+
+async def _poll_audio_once(client: SatNOGSAudioClient, queue: RedisAudioQueue) -> None:
+    try:
+        observations = await client.poll()
+    except Exception:
+        logger.exception("SatNOGS Network audio poll failed, will retry next interval")
+        return
+
+    added = 0
+    for observation in observations:
+        if await queue.push(observation):
+            added += 1
+    logger.info("Polled %d audio observation(s), %d new after dedup", len(observations), added)
 
 
 def main() -> None:

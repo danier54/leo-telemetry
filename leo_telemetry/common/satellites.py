@@ -35,3 +35,8 @@ TARGET_SATELLITES: tuple[SatelliteConfig, ...] = (
 )
 
 NORAD_IDS: tuple[int, ...] = tuple(sat.norad_id for sat in TARGET_SATELLITES)
+
+# ISS APRS digipeater (145.825 MHz, AFSK1200) -- raw off-air audio for the
+# AFSK1200 demod stretch work, polled via SatNOGS Network rather than the
+# SatNOGS DB telemetry API used for TARGET_SATELLITES above.
+AUDIO_NORAD_IDS: tuple[int, ...] = (25544,)
