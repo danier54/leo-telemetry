@@ -3,6 +3,7 @@ image:
   tag: e76b9bfbf3689e409b3ab54a1fee1fb274dcf883
 config:
   noradIds: "60525,68458,31130"
+  audioNoradIds: "25544"
   pollIntervalSeconds: "300"
   minRequestIntervalSeconds: "5"
   logLevel: "INFO"
