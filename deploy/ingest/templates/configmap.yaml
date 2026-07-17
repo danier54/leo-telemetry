@@ -7,6 +7,7 @@ metadata:
     {{- include "ingest.labels" . | nindent 4 }}
 data:
   NORAD_IDS: {{ .Values.config.noradIds | quote }}
+  AUDIO_NORAD_IDS: {{ .Values.config.audioNoradIds | quote }}
   POLL_INTERVAL_SECONDS: {{ .Values.config.pollIntervalSeconds | quote }}
   MIN_REQUEST_INTERVAL_SECONDS: {{ .Values.config.minRequestIntervalSeconds | quote }}
   REDIS_URL: "redis://ingest-redis:6379/0"
