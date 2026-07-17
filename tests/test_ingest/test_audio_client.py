@@ -4,6 +4,7 @@ from leo_telemetry.ingest.audio_client import SatNOGSAudioClient
 
 
 def _observations_response(request: httpx.Request) -> httpx.Response:
+    assert request.url.params["status"] == "good"
     norad_id = int(request.url.params["norad_cat_id"])
     return httpx.Response(
         200,

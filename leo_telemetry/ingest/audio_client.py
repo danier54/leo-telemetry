@@ -63,7 +63,15 @@ class SatNOGSAudioClient:
         return observations
 
     async def _poll_one(self, norad_id: int) -> list[AudioObservation]:
-        params = {"norad_cat_id": norad_id, "format": "json", "page_size": self.page_size}
+        # status=good keeps future scheduled passes off the page: the API
+        # returns newest-first including not-yet-flown observations, and a
+        # busy satellite like the ISS can fill a whole page with those.
+        params = {
+            "norad_cat_id": norad_id,
+            "format": "json",
+            "page_size": self.page_size,
+            "status": "good",
+        }
         response = await self._client.get(self.base_url, params=params)
         response.raise_for_status()
         results = response.json() or []
