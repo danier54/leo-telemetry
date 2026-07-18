@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from leo_telemetry.common.models import DecodedFrame, RawFrame
+from leo_telemetry.decode.crc16 import verify_fcs
 
 
 def decode_address(address_bytes: str) -> str:
@@ -37,6 +38,11 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
     if raw is None or len(raw.raw_bytes) < 15:
         return None
 
+    crc_valid = verify_fcs(raw.raw_bytes)
+
+    if not crc_valid:
+        return None
+
     addresses = []
     i = 0
     while True:
@@ -58,5 +64,5 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
         src_callsign=src_callsign,
         dest_callsign=dest_callsign,
         payload=payload,
-        crc_valid=True,
+        crc_valid=crc_valid,
     )
