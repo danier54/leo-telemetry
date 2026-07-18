@@ -20,6 +20,11 @@ def verify_fcs(frame: bytes) -> bool:
 
     Returns True if valid, False if too short or otherwise malformed
     """
-    
-    
-    return False
+    if len(frame) < 3:  # need at least 1 byte of data + 2 FCS bytes
+        return False
+
+    payload = frame[:-2]
+    received_fcs = int.from_bytes(frame[-2:], byteorder="little")
+    computed_fcs = crc16_ccitt(payload)
+
+    return computed_fcs == received_fcs
