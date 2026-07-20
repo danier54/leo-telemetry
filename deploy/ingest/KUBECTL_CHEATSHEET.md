@@ -50,10 +50,45 @@ kubectl -n leo-telemetry exec deploy/ingest-redis -- redis-cli LLEN leo_telemetr
 Current queue depth (number of deduped frames waiting for decode).
 
 ```
-kubectl -n leo-telemetry exec deploy/ingest-redis -- redis-cli LRANGE leo_telemetry:ingest:queue 0 4
+kubectl -n leo-telemetry exec deploy/ingest-redis -- redis-cli LLEN leo_telemetry:ingest:audio:queue
 ```
-Peek at the first 5 queued frames (pickled bytes -- not human-readable,
-but useful to confirm the queue isn't empty).
+Same, for the ISS audio-observation queue (metadata for raw off-air
+recordings, polled from SatNOGS Network -- see
+`leo_telemetry/ingest/audio_client.py`).
+
+```
+kubectl -n leo-telemetry exec deploy/ingest-redis -- redis-cli SCARD leo_telemetry:ingest:seen
+kubectl -n leo-telemetry exec deploy/ingest-redis -- redis-cli SCARD leo_telemetry:ingest:audio:seen
+```
+Size of the dedup "seen" sets. These grow while the queues stay short:
+a frame the pipeline has already seen is skipped, so seen-set size >>
+queue depth is normal and healthy.
+
+```
+kubectl -n leo-telemetry exec deploy/ingest -- python -c "
+import pickle, redis
+r = redis.Redis(host='ingest-redis')
+for raw in r.lrange('leo_telemetry:ingest:queue', 0, 4):
+    f = pickle.loads(raw)
+    print(f.dedup_key, f.received_at, f'{len(f.raw_bytes)} bytes')
+"
+```
+Human-readable peek at the first 5 queued frames. Queue entries are
+pickled dataclasses, so plain `redis-cli LRANGE` prints gibberish -- this
+runs inside the ingest pod, which has the code to unpickle them.
+
+```
+kubectl -n leo-telemetry exec deploy/ingest -- python -c "
+import pickle, redis
+r = redis.Redis(host='ingest-redis')
+for raw in r.lrange('leo_telemetry:ingest:audio:queue', 0, 4):
+    o = pickle.loads(raw)
+    print(o.observation_id, o.observed_at, o.payload_url)
+"
+```
+Same, for the audio queue. The printed `payload_url` is a direct link to
+the actual `.ogg` recording -- paste it into a browser (or `curl -O` it)
+to listen to / download the raw off-air audio.
 
 ## Postgres historical archive
 
@@ -74,6 +109,22 @@ kubectl -n leo-telemetry exec deploy/ingest-postgres -- env PGPASSWORD="$APP_PW"
 ```
 Row counts per satellite, run directly inside the pod (no port-forward
 needed).
+
+```
+kubectl -n leo-telemetry exec deploy/ingest-postgres -- env PGPASSWORD="$APP_PW" \
+  psql -U ingest -d leo_telemetry -c "SELECT norad_id, observation_id, received_at, encode(raw_bytes, 'hex') AS frame_hex FROM raw_frames ORDER BY received_at DESC LIMIT 5;"
+```
+The 5 most recent frames with their raw payload as hex -- the same bytes
+decode gets off the Redis queue, so this is the quickest way to eyeball
+real frame data.
+
+```
+kubectl -n leo-telemetry exec -it deploy/ingest-postgres -- env PGPASSWORD="$APP_PW" \
+  psql -U ingest -d leo_telemetry
+```
+Interactive psql session inside the pod for ad-hoc queries. `\d
+raw_frames` shows the schema; `\q` exits. (Decode-track folks: use the
+`decode_readonly` user/password instead -- see the Secrets section.)
 
 ## ArgoCD
 
