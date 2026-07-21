@@ -13,6 +13,7 @@ on:
 permissions:
   contents: write
   packages: write
+  pull-requests: write
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/leo-telemetry-ingest
@@ -52,7 +53,9 @@ jobs:
       - name: Pin the deployed image to this commit
         run: yq -i '.image.tag = "${{ github.sha }}"' deploy/ingest/values.yaml
 
-      - name: Commit and push the manifest update
+      - name: Open and merge the manifest-pin PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -61,6 +64,17 @@ jobs:
             echo "No manifest changes to commit"
             exit 0
           fi
+
+          # main requires a PR (repo ruleset) -- direct pushes are rejected,
+          # so open a short-lived branch/PR and merge it immediately instead
+          # of trying to bypass the rule. required_approving_review_count is
+          # 0, so this needs no human in the loop.
+          branch="ci/pin-ingest-image-${{ github.sha }}"
+          git checkout -b "$branch"
           git commit -m "deploy: pin ingest image to ${{ github.sha }}"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git push origin "$branch"
+
+          pr_url=$(gh pr create --base main --head "$branch" \
+            --title "deploy: pin ingest image to ${{ github.sha }}" \
+            --body "Automated tag pin from the image build.")
+          gh pr merge "$pr_url" --merge --delete-branch
