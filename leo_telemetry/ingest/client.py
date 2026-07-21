@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 
 SATNOGS_TELEMETRY_URL = "https://db.satnogs.org/api/telemetry/"
 
+# Ceiling on how long a server-sent Retry-After can stall a poll cycle;
+# anything larger (or unparseable) shouldn't wedge the loop for minutes.
+MAX_RETRY_AFTER_SECONDS = 120.0
+DEFAULT_RETRY_AFTER_SECONDS = 30.0
+
 
 class RateLimiter:
     """Enforces a minimum interval between requests made through it."""
@@ -75,14 +80,34 @@ class SatNOGSClient:
         response = await self._client.get(self.base_url, params=params, headers=headers)
 
         if response.status_code == 429:
-            retry_after = float(response.headers.get("Retry-After", 30))
+            retry_after = self._parse_retry_after(response.headers.get("Retry-After"))
             logger.warning("Rate limited by SatNOGS for NORAD %s, backing off %ss", norad_id, retry_after)
             await asyncio.sleep(retry_after)
             response = await self._client.get(self.base_url, params=params, headers=headers)
 
         response.raise_for_status()
         results = response.json().get("results") or []
-        return [self._to_raw_frame(norad_id, entry) for entry in results]
+        frames = []
+        for entry in results:
+            try:
+                frames.append(self._to_raw_frame(norad_id, entry))
+            except (ValueError, KeyError, TypeError):
+                # One corrupted entry (bad frame hex, missing/garbled
+                # timestamp) shouldn't cost us the rest of the page.
+                logger.warning(
+                    "Skipping malformed telemetry entry for NORAD %s: %r", norad_id, entry
+                )
+        return frames
+
+    @staticmethod
+    def _parse_retry_after(header: str | None) -> float:
+        try:
+            retry_after = float(header) if header is not None else DEFAULT_RETRY_AFTER_SECONDS
+        except ValueError:
+            return DEFAULT_RETRY_AFTER_SECONDS
+        if retry_after < 0:
+            return DEFAULT_RETRY_AFTER_SECONDS
+        return min(retry_after, MAX_RETRY_AFTER_SECONDS)
 
     @staticmethod
     def _to_raw_frame(norad_id: int, entry: dict) -> RawFrame:

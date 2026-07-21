@@ -8,10 +8,13 @@ for the AFSK1200 demod stretch work (leo_telemetry/decode/afsk1200.py).
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 SATNOGS_NETWORK_OBSERVATIONS_URL = "https://network.satnogs.org/api/observations/"
 
@@ -75,11 +78,19 @@ class SatNOGSAudioClient:
         response = await self._client.get(self.base_url, params=params)
         response.raise_for_status()
         results = response.json() or []
-        return [
-            self._to_audio_observation(norad_id, entry)
-            for entry in results
-            if entry.get("payload")
-        ]
+        observations = []
+        for entry in results:
+            if not entry.get("payload"):
+                continue
+            try:
+                observations.append(self._to_audio_observation(norad_id, entry))
+            except (ValueError, KeyError, TypeError):
+                # Same policy as the telemetry client: skip a malformed
+                # entry rather than losing the whole page.
+                logger.warning(
+                    "Skipping malformed audio observation for NORAD %s: %r", norad_id, entry
+                )
+        return observations
 
     @staticmethod
     def _to_audio_observation(norad_id: int, entry: dict) -> AudioObservation:

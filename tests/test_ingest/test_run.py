@@ -92,6 +92,21 @@ async def test_poll_once_swallows_client_errors():
     await client.aclose()
 
 
+async def test_poll_once_swallows_network_dropouts():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("simulated dropout")
+
+    transport = httpx.MockTransport(handler)
+    client = SatNOGSClient((60525,), min_interval_seconds=0)
+    client._client = httpx.AsyncClient(transport=transport)
+    queue = RedisDedupQueue(FakeAsyncRedis())
+
+    await _poll_once(client, queue)
+
+    assert await queue.qsize() == 0
+    await client.aclose()
+
+
 def test_audio_norad_ids_from_env_falls_back_to_default(monkeypatch):
     monkeypatch.delenv("AUDIO_NORAD_IDS", raising=False)
 
