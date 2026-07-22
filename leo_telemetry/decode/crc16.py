@@ -1,7 +1,7 @@
 """CRC-16 Frame Check Sequence validation."""
 
 from __future__ import annotations
-from crccheck.crc import Crc16
+from crccheck.crc import Crc16X25
 
 
 def crc16_ccitt(data: bytes) -> int:
@@ -11,7 +11,7 @@ def crc16_ccitt(data: bytes) -> int:
 
     Returns a 16-bit integer
     """
-    return Crc16.calc(data)
+    return Crc16X25.calc(data)
 
 
 def verify_fcs(frame: bytes) -> bool:
