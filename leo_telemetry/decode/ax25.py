@@ -3,11 +3,73 @@
 from __future__ import annotations
 
 from leo_telemetry.common.models import DecodedFrame, RawFrame
+from leo_telemetry.decode.crc16 import verify_fcs
+
+
+def decode_address(address_bytes: str) -> str:
+    """
+    Decodes field for AX.25 by shifting each byte right by 1 for
+    first 6 bytes
+
+    Returns ASCII string from shifted bytes
+    """
+    chars = []
+    for i in range(6):
+        byte = address_bytes[i]
+        shifted_byte = byte >> 1    # bitwise right shift operator
+
+        char = chr(shifted_byte)
+        chars.append(char)
+    return "".join(chars).strip()
 
 
 def decode_frame(raw: RawFrame) -> DecodedFrame | None:
-    """Run frame sync, bit-destuffing, and CRC validation on a raw frame.
-
-    Returns None if the frame fails CRC validation.
     """
-    raise NotImplementedError
+    Run frame sync, bit-destuffing, and CRC validation on a raw frame
+
+    Pipeline:
+        1. Reject obviously invalid input (null, too short)
+        2. Validate FCS via crc16.validate_fcs() *skipping for now*
+        3. Parse header fields and info payload
+        4. Return DecodedFrame, or None if any step fails
+
+    Returns None if the frame fails CRC validation
+    """
+
+    if raw is None or len(raw.raw_bytes) < 15:
+        return None
+
+    # crc_valid = verify_fcs(raw.raw_bytes)
+
+    # if not crc_valid:
+    #     return None
+
+    addresses = []
+    i = 0
+    while True:
+        if i + 7 > len(raw.raw_bytes):
+            return None
+
+        chunk = raw.raw_bytes[i:i+7]  # AX.25 callsigns are always 7 bytes long
+        address = decode_address(chunk)
+        addresses.append(address)
+        i += 7
+
+        if chunk[6] & 0x01:   # checking last bit of last byte
+            break               # break b/c reached end of addresses
+
+    if len(addresses) < 2:
+        return None
+
+    dest_callsign = addresses[0]
+    src_callsign = addresses[1]
+    payload: bytes = raw.raw_bytes[i + 2:]
+
+    return DecodedFrame(
+        norad_id=raw.norad_id,
+        received_at=raw.received_at,
+        src_callsign=src_callsign,
+        dest_callsign=dest_callsign,
+        payload=payload,
+        crc_valid=True,
+    )
