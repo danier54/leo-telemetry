@@ -8,7 +8,7 @@ from tests.fixtures.golden_frames import load_golden_frames
 GOLDEN_FRAMES = load_golden_frames()
 
 
-@pytest.mark.skip(reason="TODO: implement once frame sync/bit-destuffing is built")
+@pytest.mark.skip(reason="TODO: implement once frame sync is built")
 def test_decode_frame_strips_addressing_and_validates_crc():
     ...
 
