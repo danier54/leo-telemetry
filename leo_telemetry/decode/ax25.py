@@ -38,10 +38,10 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
     if raw is None or len(raw.raw_bytes) < 15:
         return None
 
-    crc_valid = verify_fcs(raw.raw_bytes)
+    # crc_valid = verify_fcs(raw.raw_bytes)
 
-    if not crc_valid:
-        return None
+    # if not crc_valid:
+    #     return None
 
     addresses = []
     i = 0
