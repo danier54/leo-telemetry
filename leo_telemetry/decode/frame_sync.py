@@ -10,11 +10,7 @@ def find_frame_boundaries(raw: bytes) -> list[tuple[int, int]]:
 
     Returns an empty list if no valid boundaries are found
     """
-    boundaries = []
-
-    for i in range(len(raw)):
-        print(i)
-    return boundaries
+    raise NotImplementedError
 
 
 def bit_destuff(bits: str) -> str:
