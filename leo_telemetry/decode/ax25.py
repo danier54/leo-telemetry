@@ -29,12 +29,13 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
 
     Pipeline:
         1. Reject obviously invalid input (null, too short)
-        2. Validate FCS via crc16.validate_fcs()
+        2. Validate FCS via crc16.validate_fcs() *skipping for now*
         3. Parse header fields and info payload
         4. Return DecodedFrame, or None if any step fails
 
     Returns None if the frame fails CRC validation
     """
+
     if raw is None or len(raw.raw_bytes) < 15:
         return None
 
@@ -46,6 +47,9 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
     addresses = []
     i = 0
     while True:
+        if i + 7 > len(raw.raw_bytes):
+            return None
+
         chunk = raw.raw_bytes[i:i+7]  # AX.25 callsigns are always 7 bytes long
         address = decode_address(chunk)
         addresses.append(address)
@@ -53,6 +57,9 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
 
         if chunk[6] & 0x01:   # checking last bit of last byte
             break               # break b/c reached end of addresses
+
+    if len(addresses) < 2:
+        return None
 
     dest_callsign = addresses[0]
     src_callsign = addresses[1]
