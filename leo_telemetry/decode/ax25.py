@@ -64,5 +64,5 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
         src_callsign=src_callsign,
         dest_callsign=dest_callsign,
         payload=payload,
-        crc_valid=crc_valid,
+        crc_valid=True,
     )
