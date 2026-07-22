@@ -56,7 +56,7 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
 
     dest_callsign = addresses[0]
     src_callsign = addresses[1]
-    payload = addresses[2:]
+    payload: bytes = raw.raw_bytes[i + 2:]
 
     return DecodedFrame(
         norad_id=raw.norad_id,
