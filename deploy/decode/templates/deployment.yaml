@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decode
+  namespace: leo-telemetry
+  labels:
+    {{- include "decode.labels" . | nindent 4 }}
+    app: decode
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: decode
+  template:
+    metadata:
+      labels:
+        app: decode
+    spec:
+      # If {{ .Values.image.repository }} is private, add:
+      #   imagePullSecrets:
+      #     - name: ghcr-pull-secret
+      containers:
+        - name: decode
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["python", "-m", "leo_telemetry.decode.run"]
+          envFrom:
+            - configMapRef:
+                name: decode-config
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
