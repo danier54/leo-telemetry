@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from leo_telemetry.common.models import DecodedFrame, TelemetryReading
-from leo_telemetry.demux import specs
+from common.models import DecodedFrame, TelemetryReading
+from demux import specs
 
 
 def demultiplex(frame: DecodedFrame) -> TelemetryReading:

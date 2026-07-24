@@ -6,6 +6,6 @@ using per-satellite byte specs (see `demux.specs`)[cite: 2].
 
 from __future__ import annotations
 
-from leo_telemetry.demux.demux import demultiplex
+from demux.demux import demultiplex
 
 __all__ = ["demultiplex"]

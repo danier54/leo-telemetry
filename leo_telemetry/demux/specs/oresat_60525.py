@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import struct
 
-from leo_telemetry.common.models import TelemetryMetric
-from leo_telemetry.demux.specs.common import unpack_from_view
+from common.models import TelemetryMetric
+from demux.specs.common import unpack_from_view
 
 # Pre-compiled little-endian C-struct schemas for constant time unpacking
 _SYS_STRUCT = struct.Struct("<IIHB")  # Offsets 7..17

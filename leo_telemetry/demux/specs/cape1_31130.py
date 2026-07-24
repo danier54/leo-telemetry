@@ -6,8 +6,8 @@
 
 from __future__ import annotations
 
-from leo_telemetry.common.models import TelemetryMetric
-from leo_telemetry.demux.specs.common import parse_ascii_hex
+from common.models import TelemetryMetric
+from demux.specs.common import parse_ascii_hex
 
 
 def demultiplex_payload(payload: bytes | memoryview) -> tuple[TelemetryMetric, ...]:
