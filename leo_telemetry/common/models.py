@@ -17,7 +17,8 @@ from datetime import datetime
 
 @dataclass(frozen=True)
 class RawFrame:
-    """A single raw telemetry frame as received from SatNOGS, pre-decode.
+    """
+    A single raw telemetry frame as received from SatNOGS, pre-decode.
 
     Produced by: ingest
     Consumed by: decode
@@ -31,7 +32,8 @@ class RawFrame:
 
     @property
     def dedup_key(self) -> str:
-        """Stable key used to drop duplicate captures from overlapping ground stations.
+        """
+        Stable key used to drop duplicate captures from overlapping ground stations.
 
         Uses sha256 rather than the builtin `hash()`, which is seeded
         randomly per process and would otherwise make every frame look
@@ -43,7 +45,8 @@ class RawFrame:
 
 @dataclass(frozen=True)
 class DecodedFrame:
-    """An AX.25 frame after frame sync, bit-destuffing, and CRC-16 validation.
+    """
+    An AX.25 frame after frame sync, bit-destuffing, and CRC-16 validation.
 
     Produced by: decode
     Consumed by: demux
@@ -68,7 +71,8 @@ class TelemetryMetric:
 
 @dataclass(frozen=True)
 class TelemetryReading:
-    """The full set of demultiplexed metrics for one decoded frame.
+    """
+    The full set of demultiplexed metrics for one decoded frame.
 
     Produced by: demux
     Consumed by: observability (Prometheus exporter) and scoring
