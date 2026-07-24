@@ -1,64 +1,88 @@
-"""
-Local dev script: consume raw frames from the Redis queue, run them
-through the AX.25 decoder, and print the results.
+"""Long-running decode service: drain the ingest Redis queue, run each
+RawFrame through the AX.25 decoder, and push successfully decoded frames
+onto a second Redis queue for demux.
 
-Usage:
-    uv run python -m leo_telemetry.decode.run
+Configured entirely via environment variables so it runs unmodified as a
+container:
+
+    REDIS_URL                     Redis connection URL (default: redis://localhost:6379/0)
+    DECODE_POLL_INTERVAL_SECONDS  seconds to sleep when the input queue is empty (default: 2)
+    LOG_LEVEL                     Python logging level name (default: INFO)
 """
+
+from __future__ import annotations
 
 import asyncio
+import logging
 import os
+import signal
 
 from redis.asyncio import Redis
 
-from leo_telemetry.ingest.redis_dedup import RedisDedupQueue
 from leo_telemetry.decode.ax25 import decode_frame
+from leo_telemetry.decode.redis_decoded_queue import RedisDecodedQueue
+from leo_telemetry.ingest.redis_dedup import RedisDedupQueue
+
+logger = logging.getLogger(__name__)
 
 
-async def main() -> None:
+async def run() -> None:
+    logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+
+    poll_interval = float(os.environ.get("DECODE_POLL_INTERVAL_SECONDS", "2"))
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
-    queue = RedisDedupQueue(Redis.from_url(redis_url))
+    redis_client = Redis.from_url(redis_url)
+    in_queue = RedisDedupQueue(redis_client)
+    out_queue = RedisDecodedQueue(redis_client)
 
-    print(f"Connected to Redis at {redis_url}\n")
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, stop_event.set)
 
-    while True:
-        frame = await queue.pop()
+    try:
+        while not stop_event.is_set():
+            decoded = await _decode_once(in_queue, out_queue)
+            if not decoded:
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=poll_interval)
+                except asyncio.TimeoutError:
+                    pass
+    finally:
+        await redis_client.aclose()
 
-        if frame is None:
-            print("Queue is empty, exiting.")
-            break
 
-        print("Raw frame in: \n", frame)
+async def _decode_once(in_queue: RedisDedupQueue, out_queue: RedisDecodedQueue) -> bool:
+    """Pop and decode one raw frame. Returns True if a frame was popped
+    (so the caller can skip the poll-interval sleep while draining a
+    backlog, instead of waiting between every single frame).
+    """
+    frame = await in_queue.pop()
+    if frame is None:
+        return False
 
-        print("Decoding")
-        for _ in range(3):
-            print(".", end="", flush=True)
-            await asyncio.sleep(0.5)
-        print()
-
+    try:
         result = decode_frame(frame)
+    except Exception:
+        logger.exception("Decoder raised on frame from norad=%s, dropping", frame.norad_id)
+        return True
 
-        print("Result:")
-        if result is None:
-            print(
-                f"[obs={frame.observation_id}] FAILED to decode "
-                f"raw={frame.raw_bytes.hex()}"
-            )
-        else:
-            print(
-                f"[obs={frame.observation_id}] "
-                f"norad={result.norad_id} "
-                f"src={result.src_callsign!r} "
-                f"dest={result.dest_callsign!r} "
-                f"payload={result.payload.hex()}"
-            )
+    if result is None:
+        logger.info("Failed to decode frame from norad=%s", frame.norad_id)
+        return True
 
-        for _ in range(3):
-            print(".", end="", flush=True)
-            await asyncio.sleep(0.5)
-        print()
+    await out_queue.push(result)
+    logger.info(
+        "Decoded frame norad=%s src=%s dest=%s crc_valid=%s",
+        result.norad_id, result.src_callsign, result.dest_callsign, result.crc_valid,
+    )
+    return True
+
+
+def main() -> None:
+    asyncio.run(run())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

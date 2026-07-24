@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: leo-telemetry-decode
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/danier54/leo-telemetry.git
+    targetRevision: main
+    path: deploy/decode
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: leo-telemetry
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
