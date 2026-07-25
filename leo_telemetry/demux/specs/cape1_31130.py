@@ -56,6 +56,6 @@ def demultiplex_payload(payload: bytes | memoryview) -> tuple[TelemetryMetric, .
                 TelemetryMetric("panel_nx_face_current", parse_ascii_hex(view, 8, scale=10.0), "mA"),
             ])
         case _:
-            raise ValueError(f"Unknown CAPE-1 multiplexed packet type: '{pkt_type}'[cite: 2]")
+            raise ValueError(f"Unknown CAPE-1 multiplexed packet type: '{pkt_type}'")
 
     return tuple(metrics)
