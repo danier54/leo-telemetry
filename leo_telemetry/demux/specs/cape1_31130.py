@@ -35,7 +35,7 @@ def demultiplex_payload(payload: bytes | memoryview) -> tuple[TelemetryMetric, .
 
     metrics: list[TelemetryMetric] = [TelemetryMetric("packet_type", pkt_type_num, "type")]
 
-    # Sructural pattern matching for multiplexed ASCII routing
+    # Structural pattern matching for multiplexed ASCII routing
     match pkt_type:
         case "1":
             metrics.extend([
