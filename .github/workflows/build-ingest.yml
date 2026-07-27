@@ -51,7 +51,9 @@ jobs:
           sudo mv yq /usr/local/bin/yq
 
       - name: Pin the deployed image to this commit
-        run: yq -i '.image.tag = "${{ github.sha }}"' deploy/ingest/values.yaml
+        run: |
+          yq -i '.image.tag = "${{ github.sha }}"' deploy/ingest/values.yaml
+          yq -i '.image.tag = "${{ github.sha }}"' deploy/decode/values.yaml
 
       - name: Open and merge the manifest-pin PR
         env:
@@ -59,7 +61,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add deploy/ingest/values.yaml
+          git add deploy/ingest/values.yaml deploy/decode/values.yaml
           if git diff --cached --quiet; then
             echo "No manifest changes to commit"
             exit 0
@@ -69,12 +71,12 @@ jobs:
           # so open a short-lived branch/PR and merge it immediately instead
           # of trying to bypass the rule. required_approving_review_count is
           # 0, so this needs no human in the loop.
-          branch="ci/pin-ingest-image-${{ github.sha }}"
+          branch="ci/pin-images-${{ github.sha }}"
           git checkout -b "$branch"
-          git commit -m "deploy: pin ingest image to ${{ github.sha }}"
+          git commit -m "deploy: pin ingest and decode images to ${{ github.sha }}"
           git push origin "$branch"
 
           pr_url=$(gh pr create --base main --head "$branch" \
-            --title "deploy: pin ingest image to ${{ github.sha }}" \
+            --title "deploy: pin ingest and decode images to ${{ github.sha }}" \
             --body "Automated tag pin from the image build.")
           gh pr merge "$pr_url" --merge --delete-branch

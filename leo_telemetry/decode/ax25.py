@@ -23,26 +23,36 @@ def decode_address(address_bytes: str) -> str:
     return "".join(chars).strip()
 
 
-def decode_frame(raw: RawFrame) -> DecodedFrame | None:
+def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> DecodedFrame | None:
     """
-    Run frame sync, bit-destuffing, and CRC validation on a raw frame
+    Run address parsing (and, for frames that carry one, FCS validation)
+    on a raw frame.
+
+    `has_fcs` distinguishes two kinds of RawFrame:
+        - SatNOGS DB telemetry (the default, has_fcs=False): the API
+          already strips and validates the FCS server-side, so raw_bytes
+          has no trailer left to check. crc_valid=True by provenance.
+        - Audio-demodulated frames (has_fcs=True): raw_bytes still has
+          its trailing FCS, which we validate ourselves.
 
     Pipeline:
         1. Reject obviously invalid input (null, too short)
-        2. Validate FCS via crc16.validate_fcs() *skipping for now*
+        2. If has_fcs, validate FCS via crc16.verify_fcs() and bail on failure
         3. Parse header fields and info payload
         4. Return DecodedFrame, or None if any step fails
 
-    Returns None if the frame fails CRC validation
+    Returns None if the frame is malformed or fails FCS validation.
     """
 
     if raw is None or len(raw.raw_bytes) < 15:
         return None
 
-    # crc_valid = verify_fcs(raw.raw_bytes)
-
-    # if not crc_valid:
-    #     return None
+    if has_fcs:
+        crc_valid = verify_fcs(raw.raw_bytes)
+        if not crc_valid:
+            return None
+    else:
+        crc_valid = True  # SatNOGS DB already validated/stripped the FCS
 
     addresses = []
     i = 0
@@ -63,7 +73,7 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
 
     dest_callsign = addresses[0]
     src_callsign = addresses[1]
-    payload: bytes = raw.raw_bytes[i + 2:]
+    payload: bytes = raw.raw_bytes[i + 2:-2] if has_fcs else raw.raw_bytes[i + 2:]
 
     return DecodedFrame(
         norad_id=raw.norad_id,
@@ -71,5 +81,5 @@ def decode_frame(raw: RawFrame) -> DecodedFrame | None:
         src_callsign=src_callsign,
         dest_callsign=dest_callsign,
         payload=payload,
-        crc_valid=True,
+        crc_valid=crc_valid,
     )
