@@ -17,7 +17,7 @@ def _frame(norad_id: int, payload: bytes, crc_valid: bool = True) -> DecodedFram
         crc_valid=crc_valid,
     )
 
-
+# Mock payloads/synthetic test vectors to assert parser correctly extracts offsets
 def _oresat_payload() -> bytes:
     payload = bytearray(216)
     payload[7:11] = b"\x10\x0e\x00\x00"   # uptime: 3600s (little-endian)
@@ -44,7 +44,7 @@ def metrics_to_dict(reading: TelemetryReading) -> dict[str, tuple[float, str]]:
     return {m.name: (m.value, m.unit) for m in reading.metrics}
 
 
-def test_demultiplex_oresat_golden_frame():
+def test_demultiplex_oresat_synthetic_payload():
     reading = demultiplex(_frame(60525, _oresat_payload()))
     assert reading.norad_id == 60525
     assert len(reading.metrics) == 6
@@ -58,21 +58,21 @@ def test_demultiplex_oresat_golden_frame():
     assert metrics["battery_1_pack_1_vcell"] == (4100.0, "mV")
 
 
-def test_demultiplex_cp16_golden_frame():
+def test_demultiplex_cp16_synthetic_payload():
     reading = demultiplex(_frame(68458, _cp16_payload()))
     assert reading.norad_id == 68458
     assert len(reading.metrics) == 6
     
     metrics = metrics_to_dict(reading)
-    assert metrics["daughter_a_temp_raw"] == (25.0, "C")
-    assert metrics["payload_3v3_temp_raw"] == (30.0, "C")
-    assert metrics["bus_3v3_volt_raw"] == (165.0, "count")
+    assert metrics["daughter_a_temp_raw"] == (25.0, "raw")
+    assert metrics["payload_3v3_temp_raw"] == (30.0, "raw")
+    assert metrics["bus_3v3_volt_raw"] == (165.0, "raw")
     assert metrics["user_cpu_time"] == (7200.0, "s")
     assert metrics["dir_data_free_value"] == (500.0, "KB")
     assert metrics["comms_rx_packets"] == (327680.0, "count")
 
 
-def test_demultiplex_cape1_golden_frame():
+def test_demultiplex_cape1_synthetic_payload():
     payload = b"K5USL164C8FA000A" + (b"0" * 20)
     reading = demultiplex(_frame(31130, payload))
     assert reading.norad_id == 31130
