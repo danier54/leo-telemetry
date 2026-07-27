@@ -1,7 +1,7 @@
 # Author: Taurean Newsome
 # OSU Email: newsotau@oregonstate.edu
 # Gitzhub username: newtau
-# Description: Implements helper utilities and bunary parses for mission specifications.
+# Description: Implements helper utilities and binary parsers for mission specifications.
 
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ def unpack_from_view(format_str: struct.Struct, buffer: memoryview, offset: int)
     Raises:
         ValueError: If buffer size is insufficient for the struct layout.
     """
-    if len(buffer) < offset + format_str.size:
+    if offset < 0 or len(buffer) < offset + format_str.size:
         raise ValueError(
             f"Buffer overflow: Struct requires {format_str.size} bytes at offset {offset}, "
             f"but buffer length is {len(buffer)}."
@@ -57,15 +57,15 @@ def parse_ascii_hex(
     Raises:
         ValueError: If the slice is out of bounds or invalid base-16 ASCII text.
     """
-    if len(buffer) < start + length:
-        raise ValueError(f"ASCII hex slice out of bounds at offset {start}.")
+    if start < 0 or length < 0 or len(buffer) < start + length:
+        raise ValueError(f"ASCII hex slice [{start}:{start + length}] out of bounds for buffer of length {len(buffer)}.")
 
     try:
-        raw_str = str(bytes(buffer[start : start + length]), encoding="ascii")
+        raw_str = str(bytes(buffer[start:start + length]), encoding="ascii")
         val = int(raw_str, 16)
     except (UnicodeDecodeError, ValueError) as exc:
         raise ValueError(
-            f"Invalid ASCII-hex bytes at offset {start}: {buffer[start:start+length]!r}"
+            f"Invalid ASCII-hex bytes at offset {start}: {buffer[start:start + length]!r}"
         ) from exc
 
     if signed and val >= 128:
