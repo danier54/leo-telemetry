@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from common.models import DecodedFrame, TelemetryReading
-from demux import specs
+from leo_telemetry.common.models import DecodedFrame, TelemetryReading
+from leo_telemetry.demux import specs
 
 
 def demultiplex(frame: DecodedFrame) -> TelemetryReading:
@@ -30,7 +30,7 @@ def demultiplex(frame: DecodedFrame) -> TelemetryReading:
     if not frame.crc_valid:
         raise ValueError(
             f"Data integrity fault: Cannot demultiplex frame with invalid CRC-16 "
-            f"checksum for NORAD ID {frame.norad_id}[cite: 2]."
+            f"checksum for NORAD ID {frame.norad_id}"
         )
 
     # Mission spec lookup

@@ -1,8 +1,4 @@
-# Author: Taurean Newsome
-# OSU Email: newsotau@oregonstate.edu
-# Gitzhub username: newtau
-# Description: Implements helper utilities and binary parsers for mission specifications.
-
+"""Implements helper utilities and binary parsers for mission specifications."""
 
 from __future__ import annotations
 
@@ -16,7 +12,7 @@ def unpack_from_view(format_str: struct.Struct, buffer: memoryview, offset: int)
 
     Args:
         format_str: Pre-compiled C-level struct schema.
-        buffer: The zero-copy memory view of the binary payload.
+        buffer: The zero-copy memoryview of the binary payload.
         offset: Starting byte offset in the buffer.
 
     Returns:
@@ -48,7 +44,7 @@ def parse_ascii_hex(
         buffer: The zero-copy memory view containing ASCII hex characters.
         start: Starting byte offset in the buffer.
         length: Number of ASCII bytes to read (default: 2).
-        signed: If True, applies 8-bit two's complement conversion.
+        signed: If True, applies 8-bit two's complement conversion based on bit width.
         scale: Multiplication factor for physical unit conversion (default: 1.0).
 
     Returns:
@@ -58,17 +54,22 @@ def parse_ascii_hex(
         ValueError: If the slice is out of bounds or invalid base-16 ASCII text.
     """
     if start < 0 or length < 0 or len(buffer) < start + length:
-        raise ValueError(f"ASCII hex slice [{start}:{start + length}] out of bounds for buffer of length {len(buffer)}.")
+        raise ValueError(
+            f"ASCII hex slice [{start}:{start + length}] out of bounds for buffer of length {len(buffer)}."
+        )
 
     try:
-        raw_str = str(bytes(buffer[start:start + length]), encoding="ascii")
+        raw_str = bytes(buffer[start : start + length]).decode("ascii")
         val = int(raw_str, 16)
     except (UnicodeDecodeError, ValueError) as exc:
         raise ValueError(
-            f"Invalid ASCII-hex bytes at offset {start}: {buffer[start:start + length]!r}"
+            f"Invalid ASCII-hex bytes at offset {start}: {buffer[start : start + length]!r}"
         ) from exc
 
-    if signed and val >= 128:
-        val -= 256
+    # Derive two's complement bit width from ASCII string length; each hex character represents 4 bits
+    if signed:
+        bit_width = length * 4
+        if val >= (1 << (bit_width - 1)):
+            val -= 1 << bit_width
 
     return float(val * scale)
