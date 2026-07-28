@@ -48,19 +48,18 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> DecodedFrame | None
     else:
         crc_valid = True  # SatNOGS DB already validated/stripped the FCS
 
-    addresses = []
+    buffer = memoryview(raw.raw_bytes)
+    addresses: list[str] = []
     i = 0
-    while True:
-        if i + 7 > len(raw.raw_bytes):
-            return None
 
-        chunk = raw.raw_bytes[i:i+7]  # AX.25 callsigns are always 7 bytes long
-        address = decode_address(chunk)
-        addresses.append(address)
+    while i + 7 <= len(buffer):
+        chunk = buffer[i:i + 7]   # AX.25 callsigns are always 7 bytes long
+        addresses.append(decode_address(chunk))
         i += 7
-
-        if chunk[6] & 0x01:   # checking last bit of last byte
+        if chunk[6] & 0x01:     # checking last bit of last byte
             break               # break b/c reached end of addresses
+        else:
+            return None
 
     if len(addresses) < 2:
         return None
