@@ -13,14 +13,8 @@ def decode_address(address_bytes: bytes | memoryview) -> str:
 
     Returns ASCII string from shifted bytes
     """
-    chars = []
-    for i in range(6):
-        byte = address_bytes[i]
-        shifted_byte = byte >> 1    # bitwise right shift operator
-
-        char = chr(shifted_byte)
-        chars.append(char)
-    return "".join(chars).strip()
+    return bytes(byte >> 1 for byte in address_bytes[:6])\
+        .decode("ascii").strip()
 
 
 def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> DecodedFrame | None:
