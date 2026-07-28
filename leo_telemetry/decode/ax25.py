@@ -17,7 +17,8 @@ def decode_address(address_bytes: bytes | memoryview) -> str:
         .decode("ascii").strip()
 
 
-def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> DecodedFrame | None:
+def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
+        DecodedFrame | None:
     """
     Run address parsing (and, for frames that carry one, FCS validation)
     on a raw frame.
@@ -66,7 +67,8 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> DecodedFrame | None
 
     dest_callsign = addresses[0]
     src_callsign = addresses[1]
-    payload: bytes = raw.raw_bytes[i + 2:-2] if has_fcs else raw.raw_bytes[i + 2:]
+    payload: bytes = raw.raw_bytes[i + 2:-2] if has_fcs else \
+        raw.raw_bytes[i + 2:]
 
     return DecodedFrame(
         norad_id=raw.norad_id,
