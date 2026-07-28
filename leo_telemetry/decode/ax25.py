@@ -6,7 +6,7 @@ from leo_telemetry.common.models import DecodedFrame, RawFrame
 from leo_telemetry.decode.crc16 import verify_fcs
 
 
-def decode_address(address_bytes: str) -> str:
+def decode_address(address_bytes: bytes | memoryview) -> str:
     """
     Decodes field for AX.25 by shifting each byte right by 1 for
     first 6 bytes
