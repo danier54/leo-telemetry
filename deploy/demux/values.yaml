@@ -1,0 +1,14 @@
+image:
+  repository: ghcr.io/danier54/leo-telemetry-ingest
+  tag: 0edbe90a47b150c26fcd94eaaf84bb3e0e2f7d13
+config:
+  logLevel: "INFO"
+  demuxPollIntervalSeconds: "2.0"
+  demuxMaxQueueSize: "5000"
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demux
+  namespace: leo-telemetry
+  labels:
+    {{- include "demux.labels" . | nindent 4 }}
+    app: demux
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demux
+  template:
+    metadata:
+      labels:
+        app: demux
+    spec:
+      containers:
+        - name: demux
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["python", "-m", "leo_telemetry.demux.run"]
+          envFrom:
+            - configMapRef:
+                name: demux-config
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
