@@ -121,12 +121,11 @@ async def _demux_once(
         # Exit immediately, avoid all parsing logic
         return False
 
-    try:
-        reading = demultiplex(frame)
-    except Exception:
-        # Log and exit early without pushing garbage to the output queue
-        logger.exception(
-            "Demuxer failed on frame from norad=%s; dropping.", frame.norad_id
+    reading = demultiplex(frame)
+    if reading is None:
+        logger.warning(
+            "Demuxer rejected frame from norad=%s; dropping.",
+            getattr(frame, "norad_id", "unknown"),
         )
         return True
 
