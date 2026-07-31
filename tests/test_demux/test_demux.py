@@ -17,6 +17,7 @@ def _frame(norad_id: int, payload: bytes, crc_valid: bool = True) -> DecodedFram
         crc_valid=crc_valid,
     )
 
+
 # Mock payloads/synthetic test vectors to assert parser correctly extracts offsets
 def _oresat_payload() -> bytes:
     payload = bytearray(216)
@@ -46,6 +47,7 @@ def metrics_to_dict(reading: TelemetryReading) -> dict[str, tuple[float, str]]:
 
 def test_demultiplex_oresat_synthetic_payload():
     reading = demultiplex(_frame(60525, _oresat_payload()))
+    assert reading is not None
     assert reading.norad_id == 60525
     assert len(reading.metrics) == 6
     
@@ -60,6 +62,7 @@ def test_demultiplex_oresat_synthetic_payload():
 
 def test_demultiplex_cp16_synthetic_payload():
     reading = demultiplex(_frame(68458, _cp16_payload()))
+    assert reading is not None
     assert reading.norad_id == 68458
     assert len(reading.metrics) == 6
     
@@ -75,6 +78,7 @@ def test_demultiplex_cp16_synthetic_payload():
 def test_demultiplex_cape1_synthetic_payload():
     payload = b"K5USL164C8FA000A" + (b"0" * 20)
     reading = demultiplex(_frame(31130, payload))
+    assert reading is not None
     assert reading.norad_id == 31130
     assert len(reading.metrics) == 5
     
@@ -87,15 +91,12 @@ def test_demultiplex_cape1_synthetic_payload():
 
 
 def test_demultiplex_rejects_invalid_crc():
-    with pytest.raises(ValueError, match="Data integrity fault"):
-        demultiplex(_frame(60525, _oresat_payload(), crc_valid=False))
+    assert demultiplex(_frame(60525, _oresat_payload(), crc_valid=False)) is None
 
 
 def test_demultiplex_rejects_unregistered_norad_id():
-    with pytest.raises(ValueError, match="No structural demultiplexing spec registered"):
-        demultiplex(_frame(99999, _oresat_payload()))
+    assert demultiplex(_frame(99999, _oresat_payload())) is None
 
 
 def test_demultiplex_rejects_empty_payload():
-    with pytest.raises(ValueError, match="Cannot demultiplex an empty or invalid DecodedFrame"):
-        demultiplex(_frame(60525, b""))
+    assert demultiplex(_frame(60525, b"")) is None
