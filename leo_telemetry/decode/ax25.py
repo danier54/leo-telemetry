@@ -6,24 +6,19 @@ from leo_telemetry.common.models import DecodedFrame, RawFrame
 from leo_telemetry.decode.crc16 import verify_fcs
 
 
-def decode_address(address_bytes: str) -> str:
+def decode_address(address_bytes: bytes | memoryview) -> str:
     """
     Decodes field for AX.25 by shifting each byte right by 1 for
     first 6 bytes
 
     Returns ASCII string from shifted bytes
     """
-    chars = []
-    for i in range(6):
-        byte = address_bytes[i]
-        shifted_byte = byte >> 1    # bitwise right shift operator
-
-        char = chr(shifted_byte)
-        chars.append(char)
-    return "".join(chars).strip()
+    return bytes(byte >> 1 for byte in address_bytes[:6])\
+        .decode("ascii").strip()
 
 
-def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> DecodedFrame | None:
+def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
+        DecodedFrame | None:
     """
     Run address parsing (and, for frames that carry one, FCS validation)
     on a raw frame.
@@ -54,26 +49,26 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> DecodedFrame | None
     else:
         crc_valid = True  # SatNOGS DB already validated/stripped the FCS
 
-    addresses = []
+    buffer = memoryview(raw.raw_bytes)
+    addresses: list[str] = []
     i = 0
-    while True:
-        if i + 7 > len(raw.raw_bytes):
-            return None
 
-        chunk = raw.raw_bytes[i:i+7]  # AX.25 callsigns are always 7 bytes long
-        address = decode_address(chunk)
-        addresses.append(address)
+    while i + 7 <= len(buffer):
+        chunk = buffer[i:i + 7]   # AX.25 callsigns are always 7 bytes long
+        addresses.append(decode_address(chunk))
         i += 7
-
-        if chunk[6] & 0x01:   # checking last bit of last byte
+        if chunk[6] & 0x01:     # checking last bit of last byte
             break               # break b/c reached end of addresses
+        else:
+            return None
 
     if len(addresses) < 2:
         return None
 
     dest_callsign = addresses[0]
     src_callsign = addresses[1]
-    payload: bytes = raw.raw_bytes[i + 2:-2] if has_fcs else raw.raw_bytes[i + 2:]
+    payload: bytes = raw.raw_bytes[i + 2:-2] if has_fcs else \
+        raw.raw_bytes[i + 2:]
 
     return DecodedFrame(
         norad_id=raw.norad_id,
