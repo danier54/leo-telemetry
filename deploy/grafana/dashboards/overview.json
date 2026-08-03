@@ -1,0 +1,111 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 0, 0, 0.65)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 1,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "ORESAT0.5",
+      "type": "link",
+      "url": "/d/leo-telemetry-oresat/leo-telemetry-oresat0-5"
+    },
+    {
+      "asDropdown": false,
+      "icon": "link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "SAL-E/CP16",
+      "type": "link",
+      "url": "/d/leo-telemetry-cp16/leo-telemetry-sal-e-cp16"
+    },
+    {
+      "asDropdown": false,
+      "icon": "link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "CAPE-1",
+      "type": "link",
+      "url": "/d/leo-telemetry-cape1/leo-telemetry-cape-1"
+    }
+  ],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Overall readings/sec",
+      "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(leo_telemetry_readings_total[5m]))",
+          "legendFormat": "readings/sec",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "graphMode": "area",
+        "colorMode": "background",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "All satellite metric values",
+      "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0},
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "leo_telemetry_metric_value",
+          "legendFormat": "{{satellite_id}} / {{metric_name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["leo-telemetry"],
+  "templating": {"list": []},
+  "time": {"from": "now-15m", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "LEO Telemetry Overview",
+  "uid": "leo-telemetry-overview",
+  "version": 1
+}

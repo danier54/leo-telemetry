@@ -1,0 +1,251 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 0, 0, 0.65)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 1,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Telemetry reading rate",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "sum by (satellite_id) (leo_telemetry_readings_total{satellite_id=~\"$satellite_id\"})",
+          "legendFormat": "readings",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "graphMode": "area",
+        "colorMode": "background",
+        "justifyMode": "center"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Battery voltage \u2022 $satellite_id",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "max by (satellite_id) (leo_telemetry_metric_value{metric_name=~\"battery_1_pack_1_vbatt|battery_voltage|battery_1_voltage|bus_3v3_volt_raw\",satellite_id=~\"$satellite_id\"})",
+          "legendFormat": "battery",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "mvolt"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Storage percent \u2022 $satellite_id",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "max by (satellite_id) (leo_telemetry_metric_value{metric_name=~\"system_storage_percent|dir_data_free_value|storage_percent\",satellite_id=~\"$satellite_id\"} or leo_telemetry_metric_value{metric_name=~\"packet_type|mpb_voltage|hpb_voltage|battery_1_voltage|battery_1_current_generated\",satellite_id=~\"$satellite_id\"})",
+          "legendFormat": "storage",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "System uptime \u2022 $satellite_id",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "max by (satellite_id) (leo_telemetry_metric_value{metric_name=~\"system_uptime|user_cpu_time|system_unix_time\",satellite_id=~\"$satellite_id\"} or leo_telemetry_metric_value{metric_name=~\"packet_type|mpb_voltage|hpb_voltage|battery_1_voltage|battery_1_current_generated\",satellite_id=~\"$satellite_id\"})",
+          "legendFormat": "uptime",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Last received timestamps \u2022 $satellite_id",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "max by (satellite_id) (leo_telemetry_last_received_timestamp_seconds{satellite_id=~\"$satellite_id\"} * 1000)",
+          "legendFormat": "last seen",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeAsIso"
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value"
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "time",
+                "targetField": "Value"
+              }
+            ],
+            "fields": {
+              "Value": "time"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Value": "Last seen"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "leo-telemetry"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "satellite_id",
+        "type": "custom",
+        "includeAll": false,
+        "multi": false,
+        "query": "60525,68458,31130",
+        "options": [
+          {
+            "text": "ORESAT0.5 - 60525",
+            "value": "60525",
+            "selected": true
+          },
+          {
+            "text": "SAL-E/CP16 - 68458",
+            "value": "68458",
+            "selected": false
+          },
+          {
+            "text": "CAPE-1 - 31130",
+            "value": "31130",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "ORESAT0.5 - 60525",
+          "value": "60525"
+        },
+        "refresh": 0,
+        "hide": 0
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "LEO Telemetry Dashboard",
+  "uid": "leo-telemetry-dashboard",
+  "version": 1
+}
