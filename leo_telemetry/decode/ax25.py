@@ -57,10 +57,9 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
         chunk = buffer[i:i + 7]   # AX.25 callsigns are always 7 bytes long
         addresses.append(decode_address(chunk))
         i += 7
-        if chunk[6] & 0x01:     # checking last bit of last byte
-            break               # break b/c reached end of addresses
-        else:
-            return None
+        if chunk[6] & 0x01:     # extension bit set: this was the last address field
+            break               # stop -- reached end of the address list
+        # extension bit clear: more address fields follow, keep reading them
 
     if len(addresses) < 2:
         return None
