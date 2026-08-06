@@ -35,9 +35,15 @@ def propagate_position(
         norad_id: Satellite catalog number, used only for labeling.
         tle:      The two TLE element lines.
         at:       Optional UTC instant to propagate to; defaults to now.
+                  Naive datetimes are treated as UTC, not local time.
     """
     satellite = EarthSatellite(tle[0], tle[1], str(norad_id), _TIMESCALE)
-    t = _TIMESCALE.from_datetime(at.astimezone(timezone.utc)) if at else _TIMESCALE.now()
+    if at is not None:
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        t = _TIMESCALE.from_datetime(at.astimezone(timezone.utc))
+    else:
+        t = _TIMESCALE.now()
     subpoint = wgs84.geographic_position_of(satellite.at(t))
     return (
         subpoint.latitude.degrees,

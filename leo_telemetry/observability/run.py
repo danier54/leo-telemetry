@@ -110,7 +110,12 @@ async def _track_positions(config: ObservabilityConfig, stop_event: asyncio.Even
                 logger.info("TLE refresh complete; tracking %d satellites", len(tles))
 
             for norad_id, tle in tles.items():
-                update_position_metrics(norad_id, tle)
+                try:
+                    update_position_metrics(norad_id, tle)
+                except Exception:
+                    logger.exception(
+                        "Position update failed for norad=%s; will retry", norad_id
+                    )
 
             try:
                 await asyncio.wait_for(
@@ -169,8 +174,12 @@ async def run(config: ObservabilityConfig | None = None) -> None:
                     pass
     finally:
         stop_event.set()
-        await tracker
+        try:
+            await tracker
+        except Exception:
+            logger.exception("Position tracker task failed")
         server.shutdown()
+        server.server_close()
         await redis_client.aclose()
 
 
