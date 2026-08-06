@@ -1,4 +1,4 @@
-image: grafana/grafana:11.1.0
+image: grafana/grafana:12.4.7
 adminPassword: admin
 storageSize: 1Gi
 storageClassName: local-path
