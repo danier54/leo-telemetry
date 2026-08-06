@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from leo_telemetry.common.models import DecodedFrame, RawFrame
 from leo_telemetry.decode.crc16 import verify_fcs
+from leo_telemetry.decode.cw import CW_NORAD_IDS, decode_cw_beacon
 
 # Shortest possible AX.25 frame: two 7-byte addresses plus a 1-byte
 # control field. Anything shorter can't hold real addressing.
@@ -43,20 +44,17 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     Returns None if the frame is malformed or fails FCS validation.
     """
 
-    if raw is None or len(raw.raw_bytes) < MIN_FRAME_BYTES:
+    if raw is None:
         return None
 
-    # CAPE-1 frames often arrive as mission-formatted payload bytes rather
-    # than strict AX.25 address blocks; forward payload directly for demux.
-    if raw.norad_id == 31130:
-        return DecodedFrame(
-            norad_id=raw.norad_id,
-            received_at=raw.received_at,
-            src_callsign="K5USL",
-            dest_callsign="CAPE1",
-            payload=raw.raw_bytes,
-            crc_valid=True,
-        )
+    # CW satellites (CAPE-1) downlink Morse transcriptions, not AX.25
+    # framing; route them to the CW beacon decoder, which validates the
+    # documented beacon structure and drops noise.
+    if raw.norad_id in CW_NORAD_IDS:
+        return decode_cw_beacon(raw)
+
+    if len(raw.raw_bytes) < MIN_FRAME_BYTES:
+        return None
 
     if has_fcs:
         crc_valid = verify_fcs(raw.raw_bytes)
