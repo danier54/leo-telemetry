@@ -18,8 +18,15 @@ from leo_telemetry.observability.metrics import (
 from leo_telemetry.scoring.readiness import compute_readiness_score
 
 
-def export(reading: TelemetryReading) -> None:
-    """Register a telemetry reading's metrics with the Prometheus registry."""
+def export(reading: TelemetryReading, *, count: bool = True) -> None:
+    """Register a telemetry reading's metrics with the Prometheus registry.
+
+    Args:
+        reading: The reading to publish.
+        count:   Whether to increment the readings counter. Startup replay
+                 of persisted readings passes False so restarts do not
+                 inflate throughput rates.
+    """
     norad = str(reading.norad_id)
     satellite = satellite_label(reading.norad_id)
 
@@ -31,7 +38,12 @@ def export(reading: TelemetryReading) -> None:
             unit=metric.unit,
         ).set(metric.value)
 
-    READINGS_TOTAL.labels(norad_id=norad, satellite=satellite).inc()
+    if count:
+        READINGS_TOTAL.labels(norad_id=norad, satellite=satellite).inc()
+    else:
+        # Materialize the series at its current value so rate queries
+        # have a baseline immediately after startup.
+        READINGS_TOTAL.labels(norad_id=norad, satellite=satellite)
     LAST_READING_TIMESTAMP.labels(norad_id=norad, satellite=satellite).set(
         reading.received_at.timestamp()
     )

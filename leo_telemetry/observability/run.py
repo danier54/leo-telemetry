@@ -32,6 +32,7 @@ from leo_telemetry.demux.redis_telemetry_queue import QUEUE_KEY as TELEMETRY_QUE
 from leo_telemetry.demux.redis_telemetry_queue import RedisTelemetryQueue
 from leo_telemetry.ingest.redis_dedup import QUEUE_KEY as RAW_QUEUE_KEY
 from leo_telemetry.observability.exporter import export, start_scrape_endpoint
+from leo_telemetry.observability.last_readings import LastReadingStore
 from leo_telemetry.observability.metrics import QUEUE_DEPTH
 from leo_telemetry.observability.tracking import fetch_tle, update_position_metrics
 
@@ -84,11 +85,14 @@ async def _update_queue_depths(redis_client: RedisClient) -> None:
         QUEUE_DEPTH.labels(queue=queue_name).set(await redis_client.llen(key))
 
 
-async def _export_once(queue: RedisTelemetryQueue) -> bool:
-    """Pop and export a single reading.
+async def _export_once(
+    queue: RedisTelemetryQueue, store: LastReadingStore | None = None
+) -> bool:
+    """Pop, export, and persist a single reading.
 
     Args:
         queue: The demux output buffer to pop readings from.
+        store: Optional per-satellite persistence for restart replay.
 
     Returns:
         True if a reading was exported; False if the queue was empty.
@@ -98,12 +102,29 @@ async def _export_once(queue: RedisTelemetryQueue) -> bool:
         return False
 
     export(reading)
+    if store is not None:
+        await store.save(reading)
     logger.info(
         "Exported reading norad=%s metrics_count=%d",
         reading.norad_id,
         len(reading.metrics),
     )
     return True
+
+
+async def _replay_persisted_readings(store: LastReadingStore) -> None:
+    """Restore each satellite's latest reading into the fresh registry.
+
+    Without this, a pod restart blanks every per-satellite gauge until
+    that satellite next beacons, which can be days.
+    """
+    readings = await store.load_all()
+    for reading in readings:
+        export(reading, count=False)
+    if readings:
+        logger.info(
+            "Replayed %d persisted readings into the registry", len(readings)
+        )
 
 
 async def _track_positions(config: ObservabilityConfig, stop_event: asyncio.Event) -> None:
@@ -157,6 +178,8 @@ async def run(config: ObservabilityConfig | None = None) -> None:
 
     redis_client = Redis.from_url(cfg.redis_url)
     queue = RedisTelemetryQueue(redis_client)
+    store = LastReadingStore(redis_client)
+    await _replay_persisted_readings(store)
 
     # Register OS signal handlers for Kubernetes pod shutdown
     stop_event = asyncio.Event()
@@ -179,7 +202,7 @@ async def run(config: ObservabilityConfig | None = None) -> None:
 
     try:
         while not stop_event.is_set():
-            exported = await _export_once(queue)
+            exported = await _export_once(queue, store)
             await _update_queue_depths(redis_client)
             if not exported:
                 # Sleep when the queue is empty to prevent CPU spinning

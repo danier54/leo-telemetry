@@ -8,10 +8,12 @@ from fakeredis import FakeAsyncRedis
 from leo_telemetry.common.models import TelemetryMetric, TelemetryReading
 from leo_telemetry.demux.redis_telemetry_queue import RedisTelemetryQueue
 from leo_telemetry.observability import run as run_module
+from leo_telemetry.observability.last_readings import LastReadingStore
 from leo_telemetry.observability.metrics import REGISTRY
 from leo_telemetry.observability.run import (
     ObservabilityConfig,
     _export_once,
+    _replay_persisted_readings,
     _track_positions,
     _update_queue_depths,
 )
@@ -51,6 +53,39 @@ async def test_export_once_on_empty_queue_is_a_noop():
     exported = await _export_once(queue)
 
     assert exported is False
+
+
+async def test_export_once_persists_reading_for_replay():
+    redis_client = FakeAsyncRedis()
+    queue = RedisTelemetryQueue(redis_client)
+    store = LastReadingStore(redis_client)
+    await queue.push(_reading())
+
+    await _export_once(queue, store)
+
+    stored = await store.load_all()
+    assert len(stored) == 1
+    assert stored[0].norad_id == 31130
+
+
+async def test_replay_restores_gauges_without_counting_readings():
+    redis_client = FakeAsyncRedis()
+    store = LastReadingStore(redis_client)
+    await store.save(_reading())
+    labels = {"norad_id": "31130", "satellite": "CAPE-1"}
+    count_before = (
+        REGISTRY.get_sample_value("leo_telemetry_readings_total", labels) or 0.0
+    )
+
+    await _replay_persisted_readings(store)
+
+    value = REGISTRY.get_sample_value(
+        "leo_telemetry_metric",
+        {**labels, "name": "battery_1_voltage", "unit": "V"},
+    )
+    assert value == 4.1
+    count_after = REGISTRY.get_sample_value("leo_telemetry_readings_total", labels)
+    assert count_after == count_before  # replay must not inflate throughput
 
 
 async def test_update_queue_depths_reports_every_stage():
