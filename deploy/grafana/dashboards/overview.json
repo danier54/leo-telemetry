@@ -169,7 +169,7 @@
         }
       ],
       "options": {
-        "view": { "id": "zero", "lat": 0, "lon": 0, "zoom": 2, "noRepeat": true },
+        "view": { "id": "zero", "lat": 0, "lon": 0, "zoom": 1, "noRepeat": true },
         "basemap": { "type": "default", "name": "Basemap" },
         "controls": { "showZoom": true, "mouseWheelZoom": false, "showAttribution": true },
         "layers": [
