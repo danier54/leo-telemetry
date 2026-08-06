@@ -32,7 +32,10 @@ spec:
             - name: GF_SECURITY_ADMIN_USER
               value: admin
             - name: GF_SECURITY_ADMIN_PASSWORD
-              value: {{ .Values.adminPassword | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: admin-password
             - name: GF_AUTH_ANONYMOUS_ENABLED
               value: "true"
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
