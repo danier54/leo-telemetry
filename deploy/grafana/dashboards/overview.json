@@ -141,15 +141,29 @@
       "title": "Live satellite positions",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
       "gridPos": { "x": 0, "y": 6, "w": 24, "h": 14 },
+      "timeFrom": "6h",
+      "maxDataPoints": 400,
       "targets": [
         {
           "refId": "A",
           "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_latitude_degrees)",
           "format": "table",
-          "instant": true
+          "instant": false
         },
         {
           "refId": "B",
+          "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_longitude_degrees)",
+          "format": "table",
+          "instant": false
+        },
+        {
+          "refId": "C",
+          "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_latitude_degrees)",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "D",
           "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_longitude_degrees)",
           "format": "table",
           "instant": true
@@ -161,10 +175,12 @@
           "id": "organize",
           "options": {
             "renameByName": {
-              "Value #A": "latitude",
-              "Value #B": "longitude"
+              "Value #A": "track_lat",
+              "Value #B": "track_lon",
+              "Value #C": "now_lat",
+              "Value #D": "now_lon"
             },
-            "excludeByName": { "Time": true, "norad_id": true }
+            "excludeByName": { "norad_id": true }
           }
         }
       ],
@@ -175,16 +191,35 @@
         "layers": [
           {
             "type": "markers",
-            "name": "Satellites",
+            "name": "Ground track (6h)",
             "location": {
               "mode": "coords",
-              "latitude": "latitude",
-              "longitude": "longitude"
+              "latitude": "track_lat",
+              "longitude": "track_lon"
+            },
+            "config": {
+              "style": {
+                "size": { "fixed": 2 },
+                "color": { "fixed": "#3987e5" },
+                "opacity": 0.5,
+                "symbol": { "mode": "fixed", "fixed": "img/icons/marker/circle.svg" }
+              },
+              "showLegend": false
+            },
+            "tooltip": false
+          },
+          {
+            "type": "markers",
+            "name": "Current position",
+            "location": {
+              "mode": "coords",
+              "latitude": "now_lat",
+              "longitude": "now_lon"
             },
             "config": {
               "style": {
                 "size": { "fixed": 10 },
-                "color": { "fixed": "#3987e5" },
+                "color": { "fixed": "#d95926" },
                 "symbol": { "mode": "fixed", "fixed": "img/icons/marker/circle.svg" },
                 "text": { "field": "satellite", "fixed": "", "mode": "field" },
                 "textConfig": { "fontSize": 13, "offsetY": 16, "textAlign": "center" }
