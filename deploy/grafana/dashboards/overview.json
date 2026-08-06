@@ -140,7 +140,7 @@
       "type": "geomap",
       "title": "Live satellite positions",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 0, "y": 6, "w": 14, "h": 10 },
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 14 },
       "targets": [
         {
           "refId": "A",
@@ -169,7 +169,7 @@
         }
       ],
       "options": {
-        "view": { "id": "zero", "lat": 0, "lon": 0, "zoom": 1, "noRepeat": true },
+        "view": { "id": "zero", "lat": 0, "lon": 0, "zoom": 2, "noRepeat": true },
         "basemap": { "type": "default", "name": "Basemap" },
         "controls": { "showZoom": true, "mouseWheelZoom": false, "showAttribution": true },
         "layers": [
@@ -201,7 +201,7 @@
       "type": "table",
       "title": "Orbital state",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 14, "y": 6, "w": 10, "h": 10 },
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 7 },
       "targets": [
         {
           "refId": "A",
@@ -264,7 +264,7 @@
       "type": "timeseries",
       "title": "Battery and bus voltages",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 27, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -313,7 +313,7 @@
       "type": "timeseries",
       "title": "Temperatures",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "gridPos": { "x": 12, "y": 27, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -357,7 +357,7 @@
       "type": "timeseries",
       "title": "Raw frames received per day (Postgres archive)",
       "datasource": { "type": "postgres", "uid": "leo-postgres" },
-      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 35, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -405,7 +405,7 @@
       "type": "timeseries",
       "title": "Pipeline queue depths",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 12, "y": 24, "w": 6, "h": 8 },
+      "gridPos": { "x": 12, "y": 35, "w": 6, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -444,7 +444,7 @@
       "type": "timeseries",
       "title": "Readings exported per hour",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 18, "y": 24, "w": 6, "h": 8 },
+      "gridPos": { "x": 18, "y": 35, "w": 6, "h": 8 },
       "targets": [
         {
           "refId": "A",
