@@ -6,9 +6,12 @@ metadata:
   labels:
     {{- include "grafana.labels" . | nindent 4 }}
 spec:
+  type: NodePort
   selector:
     app: grafana
   ports:
     - name: http
       port: 3000
       targetPort: http
+      # Fixed NodePort so the host's Tailscale Funnel proxy target is stable
+      nodePort: 30300
