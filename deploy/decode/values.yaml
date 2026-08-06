@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/danier54/leo-telemetry-ingest
-  tag: e954eb93db764cb3702158a15e2cb6a751009e3d
+  tag: 5424520899990ad5987a827636ea4c200ce1a80c
 config:
   logLevel: "INFO"
   decodePollIntervalSeconds: "2"
