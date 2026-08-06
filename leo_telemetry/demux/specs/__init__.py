@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Callable
 
 from leo_telemetry.common.models import TelemetryMetric
-from . import cape1_31130, cp16_68458, oresat_60525, sonate2_59112
+from . import aprs_25544, cape1_31130, cp16_68458, oresat_60525, sonate2_59112
 
 # Type alias for mission specification functions
 SpecFunc = Callable[[bytes | memoryview], tuple[TelemetryMetric, ...]]
@@ -22,6 +22,7 @@ _MISSION_SPECS: dict[int, SpecFunc] = {
     68458: cp16_68458.demultiplex_payload,
     31130: cape1_31130.demultiplex_payload,
     59112: sonate2_59112.demultiplex_payload,
+    25544: aprs_25544.demultiplex_payload,
 }
 
 
