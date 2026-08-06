@@ -1,0 +1,11 @@
+image: grafana/grafana:11.1.0
+adminPassword: admin
+storageSize: 1Gi
+storageClassName: local-path
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

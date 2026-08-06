@@ -1,0 +1,12 @@
+image: prom/prometheus:v2.53.4
+retentionTime: 30d
+scrapeIntervalSeconds: 15
+storageSize: 5Gi
+storageClassName: local-path
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

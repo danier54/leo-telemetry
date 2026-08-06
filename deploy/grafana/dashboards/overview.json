@@ -1,111 +1,329 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 0, 0, 0.65)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
-  "editable": true,
-  "fiscalYearStartMonth": 1,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "link",
-      "includeVars": false,
-      "keepTime": false,
-      "tags": [],
-      "targetBlank": false,
-      "title": "ORESAT0.5",
-      "type": "link",
-      "url": "/d/leo-telemetry-oresat/leo-telemetry-oresat0-5"
-    },
-    {
-      "asDropdown": false,
-      "icon": "link",
-      "includeVars": false,
-      "keepTime": false,
-      "tags": [],
-      "targetBlank": false,
-      "title": "SAL-E/CP16",
-      "type": "link",
-      "url": "/d/leo-telemetry-cp16/leo-telemetry-sal-e-cp16"
-    },
-    {
-      "asDropdown": false,
-      "icon": "link",
-      "includeVars": false,
-      "keepTime": false,
-      "tags": [],
-      "targetBlank": false,
-      "title": "CAPE-1",
-      "type": "link",
-      "url": "/d/leo-telemetry-cape1/leo-telemetry-cape-1"
-    }
-  ],
+  "uid": "leo-overview",
+  "title": "LEO Telemetry Overview",
+  "tags": ["leo-telemetry"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
   "panels": [
     {
+      "id": 1,
       "type": "stat",
-      "title": "Overall readings/sec",
-      "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
-      "datasource": "Prometheus",
+      "title": "Mission readiness score",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
       "targets": [
         {
-          "expr": "sum(rate(leo_telemetry_readings_total[5m]))",
-          "legendFormat": "readings/sec",
-          "refId": "A"
+          "refId": "A",
+          "expr": "leo_telemetry_readiness_score",
+          "legendFormat": "{{satellite}}"
         }
       ],
       "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 0.8 }
+            ]
+          }
         },
-        "graphMode": "area",
-        "colorMode": "background",
-        "justifyMode": "center"
+        "overrides": []
       }
     },
     {
-      "type": "timeseries",
-      "title": "All satellite metric values",
-      "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0},
-      "datasource": "Prometheus",
+      "id": 2,
+      "type": "stat",
+      "title": "Time since last reading",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 },
       "targets": [
         {
-          "expr": "leo_telemetry_metric_value",
-          "legendFormat": "{{satellite_id}} / {{metric_name}}",
-          "refId": "A"
+          "refId": "A",
+          "expr": "time() - leo_telemetry_last_reading_timestamp_seconds",
+          "legendFormat": "{{satellite}}"
         }
       ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 21600 },
+              { "color": "red", "value": 86400 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Telemetry queue depth",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "leo_telemetry_queue_depth",
+          "legendFormat": "pending readings"
         }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1000 },
+              { "color": "red", "value": 4000 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Battery and bus voltages",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "leo_telemetry_metric{unit=\"V\"}",
+          "legendFormat": "{{satellite}} {{name}}"
+        },
+        {
+          "refId": "B",
+          "expr": "leo_telemetry_metric{unit=\"mV\"} / 1000",
+          "legendFormat": "{{satellite}} {{name}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "volt",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "pointSize": 6,
+            "showPoints": "always",
+            "spanNulls": 3600000
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/^ORESAT0\\.5.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SAL-E\\/CP16.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Temperatures",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "leo_telemetry_metric{unit=\"C\"}",
+          "legendFormat": "{{satellite}} {{name}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "pointSize": 6,
+            "showPoints": "always",
+            "spanNulls": 3600000
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/^ORESAT0\\.5.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SAL-E\\/CP16.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Readings received (1h windows)",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "increase(leo_telemetry_readings_total[1h])",
+          "legendFormat": "{{satellite}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/^ORESAT0\\.5.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SAL-E\\/CP16.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "type": "geomap",
+      "title": "Live satellite positions",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "leo_telemetry_satellite_latitude_degrees",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "leo_telemetry_satellite_longitude_degrees",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "Value #A": "latitude",
+              "Value #B": "longitude"
+            },
+            "excludeByName": { "Time": true, "__name__": true }
+          }
+        }
+      ],
+      "options": {
+        "view": { "id": "zero", "zoom": 1 },
+        "basemap": { "type": "default", "name": "Basemap" },
+        "layers": [
+          {
+            "type": "markers",
+            "name": "Satellites",
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude",
+              "longitude": "longitude"
+            },
+            "config": {
+              "style": {
+                "size": { "fixed": 8 },
+                "color": { "fixed": "#3987e5" },
+                "text": { "field": "satellite", "fixed": "" },
+                "textConfig": { "fontSize": 12, "offsetY": 14 }
+              },
+              "showLegend": false
+            },
+            "tooltip": true
+          }
+        ]
       }
     }
-  ],
-  "refresh": "5s",
-  "schemaVersion": 39,
-  "style": "dark",
-  "tags": ["leo-telemetry"],
-  "templating": {"list": []},
-  "time": {"from": "now-15m", "to": "now"},
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "LEO Telemetry Overview",
-  "uid": "leo-telemetry-overview",
-  "version": 1
+  ]
 }

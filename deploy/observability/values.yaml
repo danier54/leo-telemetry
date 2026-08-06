@@ -3,11 +3,14 @@ image:
   tag: 1b0d98d02dcb9e27457c2db04488ea6d753cea3e
 config:
   logLevel: "INFO"
-  decodePollIntervalSeconds: "2"
+  obsPollIntervalSeconds: "2.0"
+  metricsPort: "8000"
+  tleRefreshSeconds: "21600"
+  positionUpdateSeconds: "15"
 resources:
   requests:
     cpu: 25m
-    memory: 32Mi
+    memory: 64Mi
   limits:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 200m
+    memory: 256Mi
