@@ -5,20 +5,16 @@
   "timezone": "browser",
   "schemaVersion": 39,
   "refresh": "1m",
-  "time": { "from": "now-24h", "to": "now" },
+  "time": { "from": "now-7d", "to": "now" },
   "panels": [
     {
       "id": 1,
       "type": "stat",
       "title": "Mission readiness score",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 6 },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "leo_telemetry_readiness_score",
-          "legendFormat": "{{satellite}}"
-        }
+        { "refId": "A", "expr": "leo_telemetry_readiness_score", "legendFormat": "{{satellite}}" }
       ],
       "options": {
         "colorMode": "value",
@@ -49,7 +45,7 @@
       "type": "stat",
       "title": "Time since last reading",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 },
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 6 },
       "targets": [
         {
           "refId": "A",
@@ -81,14 +77,44 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Telemetry queue depth",
-      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
+      "title": "Raw frames archived (all time)",
+      "datasource": { "type": "postgres", "uid": "leo-postgres" },
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 6 },
       "targets": [
         {
           "refId": "A",
-          "expr": "leo_telemetry_queue_depth",
-          "legendFormat": "pending readings"
+          "format": "table",
+          "rawSql": "SELECT count(*) AS \"frames\" FROM raw_frames"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Readings exported (24h)",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(leo_telemetry_readings_total[24h]))",
+          "legendFormat": "readings"
         }
       ],
       "options": {
@@ -100,24 +126,145 @@
       "fieldConfig": {
         "defaults": {
           "unit": "none",
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 },
-              { "color": "red", "value": 4000 }
-            ]
+            "steps": [{ "color": "blue", "value": null }]
           }
         },
         "overrides": []
       }
     },
     {
-      "id": 4,
+      "id": 5,
+      "type": "geomap",
+      "title": "Live satellite positions",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 0, "y": 6, "w": 14, "h": 10 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_latitude_degrees)",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_longitude_degrees)",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "Value #A": "latitude",
+              "Value #B": "longitude"
+            },
+            "excludeByName": { "Time": true, "norad_id": true }
+          }
+        }
+      ],
+      "options": {
+        "view": { "id": "zero", "zoom": 1.4 },
+        "basemap": { "type": "default", "name": "Basemap" },
+        "controls": { "showZoom": true, "mouseWheelZoom": false, "showAttribution": true },
+        "layers": [
+          {
+            "type": "markers",
+            "name": "Satellites",
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude",
+              "longitude": "longitude"
+            },
+            "config": {
+              "style": {
+                "size": { "fixed": 10 },
+                "color": { "fixed": "#3987e5" },
+                "symbol": { "mode": "fixed", "fixed": "img/icons/marker/circle.svg" },
+                "text": { "field": "satellite", "fixed": "", "mode": "field" },
+                "textConfig": { "fontSize": 13, "offsetY": 16, "textAlign": "center" }
+              },
+              "showLegend": false
+            },
+            "tooltip": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Orbital state",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 14, "y": 6, "w": 10, "h": 10 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_altitude_kilometers)",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_velocity_km_s)",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_latitude_degrees)",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "expr": "avg by (norad_id, satellite) (leo_telemetry_satellite_longitude_degrees)",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "satellite": "Satellite",
+              "norad_id": "NORAD",
+              "Value #A": "Altitude (km)",
+              "Value #B": "Speed (km/s)",
+              "Value #C": "Latitude",
+              "Value #D": "Longitude"
+            },
+            "excludeByName": { "Time": true },
+            "indexByName": {
+              "Satellite": 0,
+              "NORAD": 1,
+              "Altitude (km)": 2,
+              "Speed (km/s)": 3,
+              "Latitude": 4,
+              "Longitude": 5
+            }
+          }
+        }
+      ],
+      "options": { "showHeader": true },
+      "fieldConfig": {
+        "defaults": { "decimals": 2, "custom": { "align": "left" } },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
       "type": "timeseries",
       "title": "Battery and bus voltages",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -148,31 +295,25 @@
         "overrides": [
           {
             "matcher": { "id": "byRegexp", "options": "/^ORESAT0\\.5.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }]
           },
           {
             "matcher": { "id": "byRegexp", "options": "/^SAL-E\\/CP16.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }]
           },
           {
             "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
           }
         ]
       }
     },
     {
-      "id": 5,
+      "id": 8,
       "type": "timeseries",
       "title": "Temperatures",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -198,31 +339,112 @@
         "overrides": [
           {
             "matcher": { "id": "byRegexp", "options": "/^ORESAT0\\.5.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }]
           },
           {
             "matcher": { "id": "byRegexp", "options": "/^SAL-E\\/CP16.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }]
           },
           {
             "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
           }
         ]
       }
     },
     {
-      "id": 6,
+      "id": 9,
       "type": "timeseries",
-      "title": "Readings received (1h windows)",
+      "title": "Raw frames received per day (Postgres archive)",
+      "datasource": { "type": "postgres", "uid": "leo-postgres" },
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(received_at, 1d), CASE norad_id WHEN 60525 THEN 'ORESAT0.5' WHEN 68458 THEN 'SAL-E/CP16' WHEN 31130 THEN 'CAPE-1' WHEN 25544 THEN 'ISS' ELSE norad_id::text END AS metric, count(*) AS value FROM raw_frames WHERE $__timeFilter(received_at) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "stacking": { "mode": "normal" }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/^ORESAT0\\.5.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SAL-E\\/CP16.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^ISS.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#c98500" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Pipeline queue depths",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "gridPos": { "x": 12, "y": 24, "w": 6, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "leo_telemetry_queue_depth",
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "raw" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "decoded" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "telemetry" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Readings exported per hour",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 18, "y": 24, "w": 6, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -238,89 +460,20 @@
         "defaults": {
           "unit": "none",
           "min": 0,
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 60,
-            "lineWidth": 1
-          }
+          "custom": { "drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1 }
         },
         "overrides": [
           {
             "matcher": { "id": "byRegexp", "options": "/^ORESAT0\\.5.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }]
           },
           {
             "matcher": { "id": "byRegexp", "options": "/^SAL-E\\/CP16.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }]
           },
           {
             "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": 7,
-      "type": "geomap",
-      "title": "Live satellite positions",
-      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "leo_telemetry_satellite_latitude_degrees",
-          "format": "table",
-          "instant": true
-        },
-        {
-          "refId": "B",
-          "expr": "leo_telemetry_satellite_longitude_degrees",
-          "format": "table",
-          "instant": true
-        }
-      ],
-      "transformations": [
-        { "id": "merge", "options": {} },
-        {
-          "id": "organize",
-          "options": {
-            "renameByName": {
-              "Value #A": "latitude",
-              "Value #B": "longitude"
-            },
-            "excludeByName": { "Time": true, "__name__": true }
-          }
-        }
-      ],
-      "options": {
-        "view": { "id": "zero", "zoom": 1 },
-        "basemap": { "type": "default", "name": "Basemap" },
-        "layers": [
-          {
-            "type": "markers",
-            "name": "Satellites",
-            "location": {
-              "mode": "coords",
-              "latitude": "latitude",
-              "longitude": "longitude"
-            },
-            "config": {
-              "style": {
-                "size": { "fixed": 8 },
-                "color": { "fixed": "#3987e5" },
-                "text": { "field": "satellite", "fixed": "" },
-                "textConfig": { "fontSize": 12, "offsetY": 14 }
-              },
-              "showLegend": false
-            },
-            "tooltip": true
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
           }
         ]
       }

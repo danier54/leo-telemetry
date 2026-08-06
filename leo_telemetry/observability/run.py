@@ -24,11 +24,22 @@ import signal
 import httpx
 from redis.asyncio import Redis
 
-from leo_telemetry.common.satellites import NORAD_IDS
+from redis.asyncio import Redis as RedisClient
+
+from leo_telemetry.common.satellites import AUDIO_NORAD_IDS, NORAD_IDS
+from leo_telemetry.decode.redis_decoded_queue import QUEUE_KEY as DECODED_QUEUE_KEY
+from leo_telemetry.demux.redis_telemetry_queue import QUEUE_KEY as TELEMETRY_QUEUE_KEY
 from leo_telemetry.demux.redis_telemetry_queue import RedisTelemetryQueue
+from leo_telemetry.ingest.redis_dedup import QUEUE_KEY as RAW_QUEUE_KEY
 from leo_telemetry.observability.exporter import export, start_scrape_endpoint
-from leo_telemetry.observability.metrics import TELEMETRY_QUEUE_DEPTH
+from leo_telemetry.observability.metrics import QUEUE_DEPTH
 from leo_telemetry.observability.tracking import fetch_tle, update_position_metrics
+
+_QUEUE_KEYS = {
+    "raw": RAW_QUEUE_KEY,
+    "decoded": DECODED_QUEUE_KEY,
+    "telemetry": TELEMETRY_QUEUE_KEY,
+}
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +78,12 @@ class ObservabilityConfig:
         )
 
 
+async def _update_queue_depths(redis_client: RedisClient) -> None:
+    """Publish the depth of every stage-to-stage Redis queue."""
+    for queue_name, key in _QUEUE_KEYS.items():
+        QUEUE_DEPTH.labels(queue=queue_name).set(await redis_client.llen(key))
+
+
 async def _export_once(queue: RedisTelemetryQueue) -> bool:
     """Pop and export a single reading.
 
@@ -102,7 +119,7 @@ async def _track_positions(config: ObservabilityConfig, stop_event: asyncio.Even
         while not stop_event.is_set():
             now = asyncio.get_running_loop().time()
             if now - last_refresh >= config.tle_refresh_seconds:
-                for norad_id in NORAD_IDS:
+                for norad_id in NORAD_IDS + AUDIO_NORAD_IDS:
                     tle = await fetch_tle(norad_id, client)
                     if tle is not None:
                         tles[norad_id] = tle
@@ -163,7 +180,7 @@ async def run(config: ObservabilityConfig | None = None) -> None:
     try:
         while not stop_event.is_set():
             exported = await _export_once(queue)
-            TELEMETRY_QUEUE_DEPTH.set(await queue.qsize())
+            await _update_queue_depths(redis_client)
             if not exported:
                 # Sleep when the queue is empty to prevent CPU spinning
                 try:

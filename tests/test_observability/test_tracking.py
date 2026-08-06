@@ -9,6 +9,7 @@ from leo_telemetry.observability.metrics import REGISTRY
 from leo_telemetry.observability.tracking import (
     fetch_tle,
     propagate_position,
+    propagate_state,
     update_position_metrics,
 )
 
@@ -36,10 +37,17 @@ def test_propagate_position_stays_in_leo_bounds():
     assert 150.0 < alt_km < 2000.0
 
 
+def test_propagate_state_reports_orbital_speed():
+    _lat, _lon, _alt, speed_km_s = propagate_state(25544, ISS_TLE, at=EPOCH)
+
+    # ISS orbital speed is ~7.66 km/s
+    assert speed_km_s == pytest.approx(7.66, abs=0.1)
+
+
 def test_update_position_metrics_publishes_subpoint_gauges():
     update_position_metrics(25544, ISS_TLE)
 
-    labels = {"norad_id": "25544", "satellite": "25544"}
+    labels = {"norad_id": "25544", "satellite": "ISS"}
     lat = REGISTRY.get_sample_value(
         "leo_telemetry_satellite_latitude_degrees", labels
     )
@@ -49,9 +57,13 @@ def test_update_position_metrics_publishes_subpoint_gauges():
     alt = REGISTRY.get_sample_value(
         "leo_telemetry_satellite_altitude_kilometers", labels
     )
+    velocity = REGISTRY.get_sample_value(
+        "leo_telemetry_satellite_velocity_km_s", labels
+    )
     assert lat is not None and -90.0 <= lat <= 90.0
     assert lon is not None and -180.0 <= lon <= 180.0
     assert alt is not None and alt > 150.0
+    assert velocity is not None and 6.0 < velocity < 9.0
 
 
 def _client_returning(body: str, status_code: int = 200) -> httpx.AsyncClient:

@@ -16,6 +16,19 @@ data:
         url: http://prometheus:9090
         isDefault: true
         editable: false
+      - name: Raw Frame Archive
+        uid: leo-postgres
+        type: postgres
+        access: proxy
+        url: ingest-postgres:5432
+        user: decode_readonly
+        editable: false
+        jsonData:
+          database: leo_telemetry
+          sslmode: disable
+          postgresVersion: 1600
+        secureJsonData:
+          password: $POSTGRES_READONLY_PASSWORD
   dashboards.yaml: |
     apiVersion: 1
     providers:
