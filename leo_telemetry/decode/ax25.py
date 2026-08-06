@@ -46,6 +46,18 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     if raw is None or len(raw.raw_bytes) < MIN_FRAME_BYTES:
         return None
 
+    # CAPE-1 frames often arrive as mission-formatted payload bytes rather
+    # than strict AX.25 address blocks; forward payload directly for demux.
+    if raw.norad_id == 31130:
+        return DecodedFrame(
+            norad_id=raw.norad_id,
+            received_at=raw.received_at,
+            src_callsign="K5USL",
+            dest_callsign="CAPE1",
+            payload=raw.raw_bytes,
+            crc_valid=True,
+        )
+
     if has_fcs:
         crc_valid = verify_fcs(raw.raw_bytes)
         if not crc_valid:
