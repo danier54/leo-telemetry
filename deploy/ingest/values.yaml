@@ -2,7 +2,7 @@ image:
   repository: ghcr.io/danier54/leo-telemetry-ingest
   tag: 787596ece7c382e19eb463c36b741d0c0786dda4
 config:
-  noradIds: "60525,68458,31130"
+  noradIds: "60525,68458,31130,59112"
   audioNoradIds: "25544"
   pollIntervalSeconds: "300"
   minRequestIntervalSeconds: "5"
