@@ -1,0 +1,11 @@
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: "alpine"
+
+service:
+  type: ClusterIP
+  port: 80
+
+grafanaUrl: "http://localhost:3000/d/satnogs/satnogs-dashboard?orgId=1&kiosk"
