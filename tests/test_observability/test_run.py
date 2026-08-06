@@ -13,6 +13,7 @@ from leo_telemetry.observability.run import (
     ObservabilityConfig,
     _export_once,
     _track_positions,
+    _update_queue_depths,
 )
 
 
@@ -50,6 +51,20 @@ async def test_export_once_on_empty_queue_is_a_noop():
     exported = await _export_once(queue)
 
     assert exported is False
+
+
+async def test_update_queue_depths_reports_every_stage():
+    redis_client = FakeAsyncRedis()
+    queue = RedisTelemetryQueue(redis_client)
+    await queue.push(_reading())
+
+    await _update_queue_depths(redis_client)
+
+    for queue_name, expected in (("raw", 0.0), ("decoded", 0.0), ("telemetry", 1.0)):
+        depth = REGISTRY.get_sample_value(
+            "leo_telemetry_queue_depth", {"queue": queue_name}
+        )
+        assert depth == expected
 
 
 async def test_track_positions_survives_propagation_errors(monkeypatch):

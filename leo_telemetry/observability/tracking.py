@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from datetime import datetime, timezone
 
 import httpx
@@ -12,6 +13,7 @@ from leo_telemetry.observability.metrics import (
     SATELLITE_ALTITUDE,
     SATELLITE_LATITUDE,
     SATELLITE_LONGITUDE,
+    SATELLITE_VELOCITY,
     satellite_label,
 )
 
@@ -24,12 +26,12 @@ CELESTRAK_TLE_URL = "https://celestrak.org/NORAD/elements/gp.php"
 _TIMESCALE = load.timescale()
 
 
-def propagate_position(
+def propagate_state(
     norad_id: int,
     tle: tuple[str, str],
     at: datetime | None = None,
-) -> tuple[float, float, float]:
-    """Compute current (lat, lon, alt_km) for a satellite from its TLE lines.
+) -> tuple[float, float, float, float]:
+    """Compute current (lat, lon, alt_km, speed_km_s) for a satellite.
 
     Args:
         norad_id: Satellite catalog number, used only for labeling.
@@ -44,12 +46,25 @@ def propagate_position(
         t = _TIMESCALE.from_datetime(at.astimezone(timezone.utc))
     else:
         t = _TIMESCALE.now()
-    subpoint = wgs84.geographic_position_of(satellite.at(t))
+    geocentric = satellite.at(t)
+    subpoint = wgs84.geographic_position_of(geocentric)
+    speed_km_s = math.hypot(*geocentric.velocity.km_per_s)
     return (
         subpoint.latitude.degrees,
         subpoint.longitude.degrees,
         subpoint.elevation.km,
+        speed_km_s,
     )
+
+
+def propagate_position(
+    norad_id: int,
+    tle: tuple[str, str],
+    at: datetime | None = None,
+) -> tuple[float, float, float]:
+    """Compute current (lat, lon, alt_km) for a satellite from its TLE lines."""
+    lat, lon, alt_km, _speed = propagate_state(norad_id, tle, at)
+    return (lat, lon, alt_km)
 
 
 async def fetch_tle(norad_id: int, client: httpx.AsyncClient) -> tuple[str, str] | None:
@@ -84,9 +99,10 @@ async def fetch_tle(norad_id: int, client: httpx.AsyncClient) -> tuple[str, str]
 
 
 def update_position_metrics(norad_id: int, tle: tuple[str, str]) -> None:
-    """Propagate one satellite and publish its subpoint to the registry."""
-    lat, lon, alt_km = propagate_position(norad_id, tle)
+    """Propagate one satellite and publish its orbital state to the registry."""
+    lat, lon, alt_km, speed_km_s = propagate_state(norad_id, tle)
     labels = {"norad_id": str(norad_id), "satellite": satellite_label(norad_id)}
     SATELLITE_LATITUDE.labels(**labels).set(lat)
     SATELLITE_LONGITUDE.labels(**labels).set(lon)
     SATELLITE_ALTITUDE.labels(**labels).set(alt_km)
+    SATELLITE_VELOCITY.labels(**labels).set(speed_km_s)
