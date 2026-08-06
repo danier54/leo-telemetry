@@ -295,11 +295,57 @@
       }
     },
     {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Orbital altitude",
+      "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
+      "gridPos": { "x": 0, "y": 27, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "leo_telemetry_satellite_altitude_kilometers",
+          "legendFormat": "{{satellite}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lengthkm",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/^ORESAT0\\.5.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SAL-E\\/CP16.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^ISS.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#c98500" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SONATE-2.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d55181" } }]
+          }
+        ]
+      }
+    },
+    {
       "id": 7,
       "type": "timeseries",
       "title": "Battery and bus voltages",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 0, "y": 27, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 35, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -339,6 +385,10 @@
           {
             "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SONATE-2.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d55181" } }]
           }
         ]
       }
@@ -348,7 +398,7 @@
       "type": "timeseries",
       "title": "Temperatures",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 12, "y": 27, "w": 12, "h": 8 },
+      "gridPos": { "x": 12, "y": 35, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -383,6 +433,10 @@
           {
             "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SONATE-2.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d55181" } }]
           }
         ]
       }
@@ -392,12 +446,12 @@
       "type": "timeseries",
       "title": "Raw frames received per day (Postgres archive)",
       "datasource": { "type": "postgres", "uid": "leo-postgres" },
-      "gridPos": { "x": 0, "y": 35, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 43, "w": 12, "h": 8 },
       "targets": [
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT $__timeGroupAlias(received_at, 1d), CASE norad_id WHEN 60525 THEN 'ORESAT0.5' WHEN 68458 THEN 'SAL-E/CP16' WHEN 31130 THEN 'CAPE-1' WHEN 25544 THEN 'ISS' ELSE norad_id::text END AS metric, count(*) AS value FROM raw_frames WHERE $__timeFilter(received_at) GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(received_at, 1d), CASE norad_id WHEN 60525 THEN 'ORESAT0.5' WHEN 68458 THEN 'SAL-E/CP16' WHEN 31130 THEN 'CAPE-1' WHEN 25544 THEN 'ISS' WHEN 59112 THEN 'SONATE-2' ELSE norad_id::text END AS metric, count(*) AS value FROM raw_frames WHERE $__timeFilter(received_at) GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "options": {
@@ -431,6 +485,10 @@
           {
             "matcher": { "id": "byRegexp", "options": "/^ISS.*/" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#c98500" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SONATE-2.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d55181" } }]
           }
         ]
       }
@@ -440,7 +498,7 @@
       "type": "timeseries",
       "title": "Pipeline queue depths",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 12, "y": 35, "w": 6, "h": 8 },
+      "gridPos": { "x": 12, "y": 43, "w": 6, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -479,7 +537,7 @@
       "type": "timeseries",
       "title": "Readings exported per hour",
       "datasource": { "type": "prometheus", "uid": "leo-prometheus" },
-      "gridPos": { "x": 18, "y": 35, "w": 6, "h": 8 },
+      "gridPos": { "x": 18, "y": 43, "w": 6, "h": 8 },
       "targets": [
         {
           "refId": "A",
@@ -509,6 +567,10 @@
           {
             "matcher": { "id": "byRegexp", "options": "/^CAPE-1.*/" },
             "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^SONATE-2.*/" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d55181" } }]
           }
         ]
       }

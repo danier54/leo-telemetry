@@ -30,7 +30,13 @@ TARGET_SATELLITES: tuple[SatelliteConfig, ...] = (
         name="CAPE-1",
         norad_id=31130,
         maintainer="University of Louisiana",
-        protocol="9600bps FSK AX.25",
+        protocol="CW beacon",
+    ),
+    SatelliteConfig(
+        name="SONATE-2",
+        norad_id=59112,
+        maintainer="University of Wuerzburg",
+        protocol="9600bps GMSK AX.25 (CCSDS)",
     ),
 )
 
