@@ -1,4 +1,49 @@
-from leo_telemetry.decode.frame_sync import bit_destuff
+import pytest
+
+from leo_telemetry.decode.frame_sync import (
+    AX25_FLAG_BITS,
+    bit_destuff,
+    bits_to_bytes,
+    extract_frames,
+    find_frame_boundaries,
+)
+
+
+def _stuff(bits: str) -> str:
+    stuffed = ""
+    consecutive_ones = 0
+    for bit in bits:
+        stuffed += bit
+        consecutive_ones = consecutive_ones + 1 if bit == "1" else 0
+        if consecutive_ones == 5:
+            stuffed += "0"
+            consecutive_ones = 0
+    return stuffed
+
+
+def test_extract_frame_from_hdlc_bitstream():
+    body = b"\xffhello"
+    stuffed_bits = _stuff("".join(f"{byte:08b}"[::-1] for byte in body))
+    stream = "111" + AX25_FLAG_BITS + stuffed_bits + AX25_FLAG_BITS + "000"
+
+    assert find_frame_boundaries(stream) == [(11, 60)]
+    assert bits_to_bytes(bit_destuff(stuffed_bits)) == body
+    assert extract_frames(stream) == [body]
+
+
+def test_extract_multiple_frames_with_shared_flag():
+    first = _stuff("".join(f"{byte:08b}"[::-1] for byte in b"one"))
+    second = _stuff("".join(f"{byte:08b}"[::-1] for byte in b"two"))
+
+    stream = AX25_FLAG_BITS + first + AX25_FLAG_BITS + second + AX25_FLAG_BITS
+
+    assert extract_frames(stream) == [b"one", b"two"]
+
+
+@pytest.mark.parametrize("invalid", ["not bits", "01012", b"\x7e"])
+def test_find_frame_boundaries_rejects_non_bitstream_input(invalid):
+    with pytest.raises((UnicodeDecodeError, ValueError)):
+        find_frame_boundaries(invalid)
 
 
 def test_bit_destuff():
