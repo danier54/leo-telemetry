@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import os
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import datetime
 
 import httpx
 
@@ -88,13 +85,6 @@ class SatNOGSClient:
             await asyncio.sleep(retry_after)
             response = await self._client.get(self.base_url, params=params, headers=headers)
 
-        if response.status_code == 401:
-            logger.warning(
-                "SatNOGS API rejected anonymous request for NORAD %s; using local fallback data.",
-                norad_id,
-            )
-            return self._sample_frames(norad_id)
-
         response.raise_for_status()
         results = response.json().get("results") or []
         frames = []
@@ -118,61 +108,6 @@ class SatNOGSClient:
         if retry_after < 0:
             return DEFAULT_RETRY_AFTER_SECONDS
         return min(retry_after, MAX_RETRY_AFTER_SECONDS)
-
-    @staticmethod
-    def _sample_frames(norad_id: int) -> list[RawFrame]:
-        sample_time = datetime.now(timezone.utc)
-
-        if norad_id == 31130:
-            sample_hex = os.environ.get("SAMPLE_FRAME_HEX", "4b3555534c3136344338464130303041")
-            payload = bytes.fromhex(sample_hex)
-            return [
-                RawFrame(
-                    norad_id=norad_id,
-                    observation_id=999_000 + norad_id,
-                    observer_station_id=0,
-                    received_at=sample_time,
-                    raw_bytes=payload,
-                )
-            ]
-
-        repo_root = Path(__file__).resolve().parents[2]
-        fixture_path = repo_root / "tests" / "fixtures" / "golden_frames.json"
-        if fixture_path.exists():
-            with fixture_path.open() as fh:
-                records = json.load(fh)
-            for record in records:
-                if record.get("norad_id") == norad_id:
-                    raw_bytes = bytes.fromhex(record["raw_bytes_hex"])
-                    if len(raw_bytes) >= 4:
-                        mutated = bytearray(raw_bytes)
-                        step = sample_time.microsecond % 256
-                        mutated[0] = (mutated[0] + step) % 256
-                        mutated[1] = (mutated[1] + (step // 2) + 1) % 256
-                        mutated[2] = (mutated[2] + (step // 4) + 2) % 256
-                        mutated[3] = (mutated[3] + (step // 8) + 3) % 256
-                        raw_bytes = bytes(mutated)
-                    return [
-                        RawFrame(
-                            norad_id=record["norad_id"],
-                            observation_id=record["observation_id"],
-                            observer_station_id=record["observer_station_id"],
-                            received_at=sample_time,
-                            raw_bytes=raw_bytes,
-                        )
-                    ]
-
-        sample_hex = os.environ.get("SAMPLE_FRAME_HEX", "86a20000000060a6a2f0f0f0000000000000000000000000000000000000")
-        payload = bytes.fromhex(sample_hex)
-        return [
-            RawFrame(
-                norad_id=norad_id,
-                observation_id=999_000 + norad_id,
-                observer_station_id=0,
-                received_at=sample_time,
-                raw_bytes=payload,
-            )
-        ]
 
     @staticmethod
     def _to_raw_frame(norad_id: int, entry: dict) -> RawFrame:
