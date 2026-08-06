@@ -1,0 +1,16 @@
+image:
+  repository: ghcr.io/danier54/leo-telemetry-ingest
+  tag: bd73a4f71acc1b4668f5311a2447dd557254e2d3
+config:
+  logLevel: "INFO"
+  obsPollIntervalSeconds: "2.0"
+  metricsPort: "8000"
+  tleRefreshSeconds: "21600"
+  positionUpdateSeconds: "15"
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi

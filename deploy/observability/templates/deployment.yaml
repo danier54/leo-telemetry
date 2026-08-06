@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: observability
+  namespace: leo-telemetry
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    app: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: observability
+  template:
+    metadata:
+      labels:
+        app: observability
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.config.metricsPort | quote }}
+    spec:
+      containers:
+        - name: observability
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["python", "-m", "leo_telemetry.observability.run"]
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.config.metricsPort }}
+          envFrom:
+            - configMapRef:
+                name: observability-config
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
