@@ -68,6 +68,28 @@ async def test_export_once_persists_reading_for_replay():
     assert stored[0].norad_id == 31130
 
 
+async def test_store_keeps_newer_reading_over_stale_save():
+    redis_client = FakeAsyncRedis()
+    store = LastReadingStore(redis_client)
+    newer = TelemetryReading(
+        norad_id=31130,
+        received_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+        metrics=(TelemetryMetric("battery_1_voltage", 4.2, "V"),),
+    )
+    older = TelemetryReading(
+        norad_id=31130,
+        received_at=datetime(2026, 7, 30, tzinfo=timezone.utc),
+        metrics=(TelemetryMetric("battery_1_voltage", 1.0, "V"),),
+    )
+
+    await store.save(newer)
+    await store.save(older)
+
+    stored = await store.load_all()
+    assert len(stored) == 1
+    assert stored[0].received_at == newer.received_at
+
+
 async def test_replay_restores_gauges_without_counting_readings():
     redis_client = FakeAsyncRedis()
     store = LastReadingStore(redis_client)

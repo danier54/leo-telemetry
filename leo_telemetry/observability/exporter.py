@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from wsgiref.simple_server import WSGIServer
 
 from prometheus_client import start_http_server
@@ -18,8 +19,17 @@ from leo_telemetry.observability.metrics import (
 from leo_telemetry.scoring.readiness import compute_readiness_score
 
 
+# Latest received_at exported per satellite, so out-of-order processing
+# (API pages arrive newest-first, backfills replay history) can never
+# regress the gauges to an older reading's values.
+_latest_exported: dict[int, datetime] = {}
+
+
 def export(reading: TelemetryReading, *, count: bool = True) -> None:
     """Register a telemetry reading's metrics with the Prometheus registry.
+
+    Gauges are monotonic in frame time: a reading older than the
+    satellite's newest exported reading only increments the counter.
 
     Args:
         reading: The reading to publish.
@@ -29,6 +39,13 @@ def export(reading: TelemetryReading, *, count: bool = True) -> None:
     """
     norad = str(reading.norad_id)
     satellite = satellite_label(reading.norad_id)
+
+    latest = _latest_exported.get(reading.norad_id)
+    if latest is not None and reading.received_at < latest:
+        if count:
+            READINGS_TOTAL.labels(norad_id=norad, satellite=satellite).inc()
+        return
+    _latest_exported[reading.norad_id] = reading.received_at
 
     for metric in reading.metrics:
         TELEMETRY_METRIC.labels(

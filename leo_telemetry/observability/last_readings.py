@@ -25,7 +25,16 @@ class LastReadingStore:
         self._redis = redis_client
 
     async def save(self, reading: TelemetryReading) -> None:
-        """Persist a reading as its satellite's most recent."""
+        """Persist a reading as its satellite's most recent.
+
+        Keeps the stored reading when it is newer than the incoming one,
+        so out-of-order processing cannot regress the replay state.
+        """
+        stored = await self._redis.hget(HASH_KEY, str(reading.norad_id))
+        if stored is not None:
+            existing: TelemetryReading = pickle.loads(stored)
+            if existing.received_at > reading.received_at:
+                return
         await self._redis.hset(
             HASH_KEY, str(reading.norad_id), pickle.dumps(reading)
         )
