@@ -9,10 +9,6 @@ from leo_telemetry.decode.cw import CW_NORAD_IDS, decode_cw_beacon
 # Shortest possible AX.25 frame: two 7-byte addresses plus a 1-byte
 # control field. Anything shorter can't hold real addressing.
 MIN_FRAME_BYTES = 15
-
-
-# Protocol Constants
-AX25_MIN_FRAME_LEN = 15
 AX25_ADDR_LEN = 7
 AX25_CTRL_PID_LEN = 2
 
@@ -49,8 +45,6 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
 
     Returns None if the frame is malformed or fails FCS validation.
     """
-
-<<<<<<< Updated upstream
     if raw is None:
         return None
 
@@ -61,9 +55,6 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
         return decode_cw_beacon(raw)
 
     if len(raw.raw_bytes) < MIN_FRAME_BYTES:
-=======
-    if not raw or len(raw.raw_bytes) < AX25_MIN_FRAME_LEN:
->>>>>>> Stashed changes
         return None
 
     if has_fcs and not verify_fcs(raw.raw_bytes):
@@ -73,17 +64,13 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     buffer = memoryview(raw.raw_bytes)
     addresses: list[str] = []
     i = 0
-<<<<<<< Updated upstream
     found_last_address = False
-=======
-    found_end_of_addresses = False
->>>>>>> Stashed changes
 
     while i + AX25_ADDR_LEN <= len(buffer):
         chunk = buffer[i:i + AX25_ADDR_LEN]   # AX.25 callsigns are always 7 bytes long
         addresses.append(decode_address(chunk))
-<<<<<<< Updated upstream
-        i += 7
+        i += AX25_ADDR_LEN
+        
         if chunk[6] & 0x01:     # extension bit set: this was the last address field
             found_last_address = True
             break               # stop -- reached end of the address list
@@ -93,16 +80,6 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     # "addresses" we collected aren't real AX.25 addresses at all -- reject
     # rather than build a frame out of whatever we happened to slice off.
     if not found_last_address or len(addresses) < 2:
-=======
-        i += AX25_ADDR_LEN
-
-        if chunk[6] & 0x01:       # checking last bit of last byte
-            found_end_of_addresses = True
-            break                 # break b/c reached end of addresses
-
-    # Validate address parsing success and that we have at least a source and destination callsign
-    if not found_end_of_addresses or len(addresses) < 2:
->>>>>>> Stashed changes
         return None
 
     payload_end = -2 if has_fcs else None

@@ -8,19 +8,11 @@ captures contain RF noise or truncation.
 
 from __future__ import annotations
 
-<<<<<<< Updated upstream
 import pytest
 
 from leo_telemetry.common.models import DecodedFrame, RawFrame, TelemetryReading
 from leo_telemetry.demux.demux import demultiplex
 from leo_telemetry.decode.ax25 import MIN_FRAME_BYTES, decode_frame
-=======
-import pytest  # Added for exception testing
-
-from leo_telemetry.common.models import DecodedFrame, RawFrame, TelemetryReading
-from leo_telemetry.demux.demux import demultiplex
-from leo_telemetry.decode.ax25 import decode_frame, AX25_MIN_FRAME_LEN
->>>>>>> Stashed changes
 from tests.fixtures.golden_frames import load_golden_frames
 
 # NORAD IDs
@@ -32,13 +24,10 @@ NORAD_ID_CP16 = 68458
 EXPECTED_ORESAT_METRIC_COUNT = 6
 EXPECTED_CP16_METRIC_COUNT = 6
 EXPECTED_CAPE1_METRIC_COUNT = 8
-<<<<<<< Updated upstream
+
 # Matches decode_frame()'s own minimum so a "valid" frame here can never be
 # too short for decode_frame() to actually decode.
 MIN_VALID_PAYLOAD_BYTES = MIN_FRAME_BYTES
-=======
-MIN_VALID_PAYLOAD_BYTES = AX25_MIN_FRAME_LEN 
->>>>>>> Stashed changes
 
 # Kaitai Struct Data Type Ceilings
 MAX_U32 = 4294967295.0

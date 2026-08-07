@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from leo_telemetry.common.models import RawFrame
 from leo_telemetry.decode.ax25 import decode_frame
 from leo_telemetry.decode.cw import decode_cw_beacon
@@ -73,10 +75,11 @@ def test_decoded_beacon_demultiplexes_into_metrics():
     assert by_name["temp_nx_face"].value == 16.0
 
 
-def test_beacon_with_undecodable_fields_is_rejected_downstream():
+def test_beacon_with_undecodable_fields_is_rejected_downstream() -> None:
     # Structure is present but too few hex chars for the type-1 layout;
-    # decode accepts it, demux honestly rejects it.
+    # decode accepts it, demux raises ValueError to route it to the DLQ.
     frame = decode_cw_beacon(_cw_frame("K5USL1A4"))
 
     assert frame is not None
-    assert demultiplex(frame) is None
+    with pytest.raises(ValueError):
+        demultiplex(frame)
