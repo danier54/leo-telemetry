@@ -2,17 +2,25 @@
 
 Validates that real-world SatNOGS payload captures loaded from the shared
 fixture (`load_golden_frames`) are either correctly demultiplexed into
-physical TelemetryReading models or rejected (returning None) when
+physical TelemetryReading models or rejected (raising ValueError) when
 captures contain RF noise or truncation.
 """
 
 from __future__ import annotations
 
+<<<<<<< Updated upstream
 import pytest
 
 from leo_telemetry.common.models import DecodedFrame, RawFrame, TelemetryReading
 from leo_telemetry.demux.demux import demultiplex
 from leo_telemetry.decode.ax25 import MIN_FRAME_BYTES, decode_frame
+=======
+import pytest  # Added for exception testing
+
+from leo_telemetry.common.models import DecodedFrame, RawFrame, TelemetryReading
+from leo_telemetry.demux.demux import demultiplex
+from leo_telemetry.decode.ax25 import decode_frame, AX25_MIN_FRAME_LEN
+>>>>>>> Stashed changes
 from tests.fixtures.golden_frames import load_golden_frames
 
 # NORAD IDs
@@ -24,9 +32,13 @@ NORAD_ID_CP16 = 68458
 EXPECTED_ORESAT_METRIC_COUNT = 6
 EXPECTED_CP16_METRIC_COUNT = 6
 EXPECTED_CAPE1_METRIC_COUNT = 8
+<<<<<<< Updated upstream
 # Matches decode_frame()'s own minimum so a "valid" frame here can never be
 # too short for decode_frame() to actually decode.
 MIN_VALID_PAYLOAD_BYTES = MIN_FRAME_BYTES
+=======
+MIN_VALID_PAYLOAD_BYTES = AX25_MIN_FRAME_LEN 
+>>>>>>> Stashed changes
 
 # Kaitai Struct Data Type Ceilings
 MAX_U32 = 4294967295.0
@@ -176,10 +188,10 @@ def test_golden_frames_cape1_valid_telemetry() -> None:
 
 
 def test_golden_frames_rejects_truncated_or_noise_captures() -> None:
-    """Assert malformed captures and non-telemetry beacon snippets return None.
+    """Assert malformed captures and non-telemetry beacon snippets raise errors.
 
-    Verifies that real-world RF noise or truncated frames do not raise unhandled
-    exceptions and are filtered out by the demultiplexer.
+    Verifies that real-world RF noise or truncated frames throw ValueErrors
+    so they can be caught and routed to the Dead-Letter Queue by the daemon.
     """
     all_raw_frames = load_golden_frames()
 
@@ -189,19 +201,31 @@ def test_golden_frames_rejects_truncated_or_noise_captures() -> None:
         if frame.norad_id == NORAD_ID_ORESAT and len(frame.raw_bytes) < MIN_VALID_PAYLOAD_BYTES
     )
     
-    # Verify demux handles bad inputs
+    # Verify demux handles bad inputs by throwing a ValueError for the DLQ to catch
     truncated_decoded = DecodedFrame(
-        norad_id=NORAD_ID_ORESAT, received_at=truncated_oresat_frame.received_at,
-        src_callsign="TEST", dest_callsign="EARTH", payload=truncated_oresat_frame.raw_bytes, crc_valid=True
+        norad_id=NORAD_ID_ORESAT, 
+        received_at=truncated_oresat_frame.received_at,
+        src_callsign="TEST", 
+        dest_callsign="EARTH", 
+        payload=truncated_oresat_frame.raw_bytes, 
+        crc_valid=True
     )
-    assert demultiplex(truncated_decoded) is None
+    
+    with pytest.raises(ValueError):
+        demultiplex(truncated_decoded)
 
     # Validate rejection of CAPE-1 ASCII beacon snippets lacking the 'K5USL' header
     cape1_noise_frames = [frame for frame in all_raw_frames if frame.norad_id == NORAD_ID_CAPE1]
     
     for raw_frame in cape1_noise_frames:
         noise_decoded = DecodedFrame(
-            norad_id=NORAD_ID_CAPE1, received_at=raw_frame.received_at,
-            src_callsign="TEST", dest_callsign="EARTH", payload=raw_frame.raw_bytes, crc_valid=True
+            norad_id=NORAD_ID_CAPE1, 
+            received_at=raw_frame.received_at,
+            src_callsign="TEST", 
+            dest_callsign="EARTH", 
+            payload=raw_frame.raw_bytes, 
+            crc_valid=True
         )
-        assert demultiplex(noise_decoded) is None
+        
+        with pytest.raises(ValueError):
+            demultiplex(noise_decoded)

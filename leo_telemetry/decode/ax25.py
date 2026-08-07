@@ -11,6 +11,12 @@ from leo_telemetry.decode.cw import CW_NORAD_IDS, decode_cw_beacon
 MIN_FRAME_BYTES = 15
 
 
+# Protocol Constants
+AX25_MIN_FRAME_LEN = 15
+AX25_ADDR_LEN = 7
+AX25_CTRL_PID_LEN = 2
+
+
 def decode_address(address_bytes: bytes | memoryview) -> str:
     """
     Decodes field for AX.25 by shifting each byte right by 1 for
@@ -44,6 +50,7 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     Returns None if the frame is malformed or fails FCS validation.
     """
 
+<<<<<<< Updated upstream
     if raw is None:
         return None
 
@@ -54,23 +61,28 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
         return decode_cw_beacon(raw)
 
     if len(raw.raw_bytes) < MIN_FRAME_BYTES:
+=======
+    if not raw or len(raw.raw_bytes) < AX25_MIN_FRAME_LEN:
+>>>>>>> Stashed changes
         return None
 
-    if has_fcs:
-        crc_valid = verify_fcs(raw.raw_bytes)
-        if not crc_valid:
-            return None
-    else:
-        crc_valid = True  # SatNOGS DB already validated/stripped the FCS
+    if has_fcs and not verify_fcs(raw.raw_bytes):
+        return None
 
+    # Parse addresses
     buffer = memoryview(raw.raw_bytes)
     addresses: list[str] = []
     i = 0
+<<<<<<< Updated upstream
     found_last_address = False
+=======
+    found_end_of_addresses = False
+>>>>>>> Stashed changes
 
-    while i + 7 <= len(buffer):
-        chunk = buffer[i:i + 7]   # AX.25 callsigns are always 7 bytes long
+    while i + AX25_ADDR_LEN <= len(buffer):
+        chunk = buffer[i:i + AX25_ADDR_LEN]   # AX.25 callsigns are always 7 bytes long
         addresses.append(decode_address(chunk))
+<<<<<<< Updated upstream
         i += 7
         if chunk[6] & 0x01:     # extension bit set: this was the last address field
             found_last_address = True
@@ -81,18 +93,26 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     # "addresses" we collected aren't real AX.25 addresses at all -- reject
     # rather than build a frame out of whatever we happened to slice off.
     if not found_last_address or len(addresses) < 2:
+=======
+        i += AX25_ADDR_LEN
+
+        if chunk[6] & 0x01:       # checking last bit of last byte
+            found_end_of_addresses = True
+            break                 # break b/c reached end of addresses
+
+    # Validate address parsing success and that we have at least a source and destination callsign
+    if not found_end_of_addresses or len(addresses) < 2:
+>>>>>>> Stashed changes
         return None
 
-    dest_callsign = addresses[0]
-    src_callsign = addresses[1]
-    payload: bytes = raw.raw_bytes[i + 2:-2] if has_fcs else \
-        raw.raw_bytes[i + 2:]
+    payload_end = -2 if has_fcs else None
+    payload = raw.raw_bytes[i + AX25_CTRL_PID_LEN:payload_end]
 
     return DecodedFrame(
         norad_id=raw.norad_id,
         received_at=raw.received_at,
-        src_callsign=src_callsign,
-        dest_callsign=dest_callsign,
+        src_callsign=addresses[1],
+        dest_callsign=addresses[0],
         payload=payload,
-        crc_valid=crc_valid,
+        crc_valid=True,  # the CRC validity is already checked above, so we can safely set this to True
     )
