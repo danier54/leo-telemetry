@@ -1,7 +1,7 @@
 import pytest
 
+from leo_telemetry.decode.constants import AX25_FLAG_BITS
 from leo_telemetry.decode.frame_sync import (
-    AX25_FLAG_BITS,
     bit_destuff,
     bits_to_bytes,
     extract_frames,
