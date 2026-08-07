@@ -1,3 +1,9 @@
+{{- define "demux.labels" -}}
+app.kubernetes.io/name: demux
+app.kubernetes.io/part-of: leo-telemetry
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end -}}
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -9,4 +15,5 @@ data:
   REDIS_URL: "redis://ingest-redis:6379/0"
   DEMUX_POLL_INTERVAL_SECONDS: {{ .Values.config.demuxPollIntervalSeconds | quote }}
   DEMUX_MAX_QUEUE_SIZE: {{ .Values.config.demuxMaxQueueSize | quote }}
+  DEMUX_DLQ_MAX_SIZE: {{ .Values.config.demuxDlqMaxSize | quote }}
   LOG_LEVEL: {{ .Values.config.logLevel | quote }}

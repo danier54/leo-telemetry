@@ -9,6 +9,8 @@ from leo_telemetry.decode.cw import CW_NORAD_IDS, decode_cw_beacon
 # Shortest possible AX.25 frame: two 7-byte addresses plus a 1-byte
 # control field. Anything shorter can't hold real addressing.
 MIN_FRAME_BYTES = 15
+AX25_ADDR_LEN = 7
+AX25_CTRL_PID_LEN = 2
 
 
 def decode_address(address_bytes: bytes | memoryview) -> str:
@@ -43,7 +45,6 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
 
     Returns None if the frame is malformed or fails FCS validation.
     """
-
     if raw is None:
         return None
 
@@ -56,22 +57,20 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     if len(raw.raw_bytes) < MIN_FRAME_BYTES:
         return None
 
-    if has_fcs:
-        crc_valid = verify_fcs(raw.raw_bytes)
-        if not crc_valid:
-            return None
-    else:
-        crc_valid = True  # SatNOGS DB already validated/stripped the FCS
+    if has_fcs and not verify_fcs(raw.raw_bytes):
+        return None
 
+    # Parse addresses
     buffer = memoryview(raw.raw_bytes)
     addresses: list[str] = []
     i = 0
     found_last_address = False
 
-    while i + 7 <= len(buffer):
-        chunk = buffer[i:i + 7]   # AX.25 callsigns are always 7 bytes long
+    while i + AX25_ADDR_LEN <= len(buffer):
+        chunk = buffer[i:i + AX25_ADDR_LEN]   # AX.25 callsigns are always 7 bytes long
         addresses.append(decode_address(chunk))
-        i += 7
+        i += AX25_ADDR_LEN
+        
         if chunk[6] & 0x01:     # extension bit set: this was the last address field
             found_last_address = True
             break               # stop -- reached end of the address list
@@ -83,16 +82,14 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     if not found_last_address or len(addresses) < 2:
         return None
 
-    dest_callsign = addresses[0]
-    src_callsign = addresses[1]
-    payload: bytes = raw.raw_bytes[i + 2:-2] if has_fcs else \
-        raw.raw_bytes[i + 2:]
+    payload_end = -2 if has_fcs else None
+    payload = raw.raw_bytes[i + AX25_CTRL_PID_LEN:payload_end]
 
     return DecodedFrame(
         norad_id=raw.norad_id,
         received_at=raw.received_at,
-        src_callsign=src_callsign,
-        dest_callsign=dest_callsign,
+        src_callsign=addresses[1],
+        dest_callsign=addresses[0],
         payload=payload,
-        crc_valid=crc_valid,
+        crc_valid=True,  # the CRC validity is already checked above, so we can safely set this to True
     )

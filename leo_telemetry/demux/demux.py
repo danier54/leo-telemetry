@@ -19,6 +19,9 @@ def demultiplex(frame: DecodedFrame) -> TelemetryReading | None:
     Returns:
         A TelemetryReading model populated with a tuple of extracted metrics,
         or None if the frame is empty, CRC failed, or the satellite has no registered spec.
+        
+    Raises:
+        ValueError: If struct unpacking or ASCII-hex parsing overflows.
     """
     # Prevent evaluation on empty or malformed objects
     if not frame or not getattr(frame, "payload", None):
@@ -35,12 +38,9 @@ def demultiplex(frame: DecodedFrame) -> TelemetryReading | None:
     # Convert to zero-copy memoryview before passing down the pipeline
     payload_view = memoryview(frame.payload)
 
-    try:
-        return TelemetryReading(
-            norad_id=frame.norad_id,
-            received_at=frame.received_at,
-            metrics=spec_func(payload_view),
-        )
-    except ValueError:
-        # Catch struct unpacking or ASCII-hex parsing overflows
-        return None
+    # Allow ValueErrors to bubble up to run.py for routing to the DLQ
+    return TelemetryReading(
+        norad_id=frame.norad_id,
+        received_at=frame.received_at,
+        metrics=spec_func(payload_view),
+    )
