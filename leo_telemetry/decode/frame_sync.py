@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from leo_telemetry.decode.constants import AX25_FLAG_BITS
+
+AX25_FLAG_BITS = "01111110"
 
 
 def bits_to_bytes(bits: str) -> bytes:

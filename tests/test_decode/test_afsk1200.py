@@ -5,18 +5,15 @@ import pytest
 
 from leo_telemetry.common.models import RawFrame
 from leo_telemetry.decode.afsk1200 import (
+    AFSK1200_BAUD_RATE,
+    AFSK1200_MARK_FREQUENCY_HZ,
+    AFSK1200_SPACE_FREQUENCY_HZ,
     decode_audio,
     demodulate,
 )
 from leo_telemetry.decode.ax25 import decode_frame
-from leo_telemetry.decode.constants import (
-    AFSK1200_BAUD_RATE,
-    AFSK1200_MARK_FREQUENCY_HZ,
-    AFSK1200_SPACE_FREQUENCY_HZ,
-    AX25_FLAG_BITS,
-)
 from leo_telemetry.decode.crc16 import verify_fcs
-from leo_telemetry.decode.frame_sync import extract_frames
+from leo_telemetry.decode.frame_sync import AX25_FLAG_BITS, extract_frames
 from tests.fixtures.afsk1200_samples import load_afsk1200_sample
 
 

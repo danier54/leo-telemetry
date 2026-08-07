@@ -16,12 +16,11 @@ import numpy as np
 
 import soundfile as sf
 
-from leo_telemetry.decode.constants import (
-    AFSK1200_BAUD_RATE,
-    AFSK1200_MARK_FREQUENCY_HZ,
-    AFSK1200_SPACE_FREQUENCY_HZ,
-    AX25_FLAG_BITS,
-)
+from leo_telemetry.decode.frame_sync import AX25_FLAG_BITS
+
+AFSK1200_BAUD_RATE = 1200
+AFSK1200_MARK_FREQUENCY_HZ = 1200
+AFSK1200_SPACE_FREQUENCY_HZ = 2200
 
 
 def decode_audio(audio: bytes) -> tuple[np.ndarray, int]:

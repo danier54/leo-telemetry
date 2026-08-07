@@ -12,8 +12,7 @@ import pytest
 
 from leo_telemetry.common.models import DecodedFrame, RawFrame, TelemetryReading
 from leo_telemetry.demux.demux import demultiplex
-from leo_telemetry.decode.ax25 import decode_frame
-from leo_telemetry.decode.constants import AX25_MIN_FRAME_BYTES
+from leo_telemetry.decode.ax25 import MIN_FRAME_BYTES, decode_frame
 from tests.fixtures.golden_frames import load_golden_frames
 
 # NORAD IDs
@@ -27,7 +26,7 @@ EXPECTED_CP16_METRIC_COUNT = 6
 EXPECTED_CAPE1_METRIC_COUNT = 8
 # Matches decode_frame()'s own minimum so a "valid" frame here can never be
 # too short for decode_frame() to actually decode.
-MIN_VALID_PAYLOAD_BYTES = AX25_MIN_FRAME_BYTES
+MIN_VALID_PAYLOAD_BYTES = MIN_FRAME_BYTES
 
 # Kaitai Struct Data Type Ceilings
 MAX_U32 = 4294967295.0
