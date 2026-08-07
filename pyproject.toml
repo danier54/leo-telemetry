@@ -16,6 +16,8 @@ dependencies = [
     "skyfield>=1.49",
     "prometheus-client>=0.20",
     "psycopg[binary]>=3.2",
+    "numpy>=2.0",
+    "soundfile>=0.12",
 ]
 
 [project.optional-dependencies]
