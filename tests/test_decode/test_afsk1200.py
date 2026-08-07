@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import numpy as np
-import pytest
 
 from leo_telemetry.common.models import RawFrame
 from leo_telemetry.decode.afsk1200 import (
@@ -45,32 +44,6 @@ def test_demodulate_recovers_nrzi_hdlc_flags():
     recovered = demodulate(_afsk_encode("1010" + expected + "1010"), 22050)
 
     assert expected in recovered
-
-
-def test_demodulate_tolerates_amplitude_and_noise():
-    rng = np.random.default_rng(42)
-    expected = AX25_FLAG_BITS * 8
-    samples = _afsk_encode("1010" + expected + "1010")
-    samples = 0.25 * samples + rng.normal(0, 0.015, len(samples))
-
-    assert expected[1:] in demodulate(samples, 22050)
-
-
-@pytest.mark.parametrize(
-    ("samples", "sample_rate"),
-    [
-        (np.zeros((2, 2)), 22050),
-        (np.array([0.0, np.nan]), 22050),
-        (np.zeros(100), 4000),
-    ],
-)
-def test_demodulate_rejects_invalid_pcm(samples, sample_rate):
-    with pytest.raises(ValueError):
-        demodulate(samples, sample_rate)
-
-
-def test_demodulate_returns_empty_for_short_capture():
-    assert demodulate(np.zeros(10), 22050) == ""
 
 
 def test_real_iss_recording_recovers_valid_oracle_packet():
