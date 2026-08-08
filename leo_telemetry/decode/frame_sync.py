@@ -1,8 +1,11 @@
 """AX.25 frame boundary detection and bit-destuffing."""
 
 from __future__ import annotations
+import logging
 
 from leo_telemetry.decode.constants import AX25_FLAG_BITS
+
+logger = logging.getLogger(__name__)
 
 
 def bits_to_bytes(bits: str) -> bytes:
@@ -21,13 +24,13 @@ def extract_frames(bits: str) -> list[bytes]:
         try:
             frames.append(bits_to_bytes(bit_destuff(bits[start:end])))
         except ValueError:
-            continue
+            logger.debug("Skipping malformed frame: ", start, end)
     return frames
 
 
 def find_frame_boundaries(raw: bytes | str) -> list[tuple[int, int]]:
     """
-    Locate AX.25 flag bytes (0x7E) and return
+    Locate AX.25 flag patterns in an ASCII '0'/'1' bitstring and return
     (start_idx, end_idx) pairs for each frame
 
     Returns an empty list if no valid boundaries are found
