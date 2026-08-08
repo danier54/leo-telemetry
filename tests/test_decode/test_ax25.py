@@ -6,6 +6,7 @@ from leo_telemetry.common.models import RawFrame
 from leo_telemetry.decode.ax25 import decode_frame
 from leo_telemetry.decode.crc16 import crc16_ccitt, verify_fcs
 from leo_telemetry.decode.frame_sync import AX25_FLAG_BITS, extract_frames
+from tests.test_decode.helpers import stuff_bits
 from tests.fixtures.golden_frames import load_golden_frames
 
 # Real captured frames to decode against -- see tests/fixtures/golden_frames.py
@@ -25,7 +26,7 @@ def test_decode_frame_strips_addressing_and_validates_crc():
         append_fcs=True,
     )
     frame_bits = "".join(f"{byte:08b}"[::-1] for byte in frame)
-    stuffed_bits = _stuff_bits(frame_bits)
+    stuffed_bits = stuff_bits(frame_bits)
 
     extracted = extract_frames(
         AX25_FLAG_BITS + stuffed_bits + AX25_FLAG_BITS
@@ -86,18 +87,6 @@ def _shifted_address(callsign: str, ssid: int, *, last: bool) -> bytes:
     shifted = bytes((ord(c) << 1) for c in padded)
     ssid_byte = (ssid << 1) | 0x01 if last else (ssid << 1)
     return shifted + bytes([ssid_byte])
-
-
-def _stuff_bits(bits: str) -> str:
-    stuffed = ""
-    consecutive_ones = 0
-    for bit in bits:
-        stuffed += bit
-        consecutive_ones = consecutive_ones + 1 if bit == "1" else 0
-        if consecutive_ones == 5:
-            stuffed += "0"
-            consecutive_ones = 0
-    return stuffed
 
 
 def test_decode_frame_validates_fcs_when_has_fcs_true():
