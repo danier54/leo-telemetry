@@ -20,6 +20,14 @@ import signal
 from redis.asyncio import Redis
 
 from leo_telemetry.decode.ax25 import decode_frame
+from leo_telemetry.decode.constants import (
+    DECODE_POLL_INTERVAL_ENV,
+    DEFAULT_DECODE_POLL_INTERVAL_SECONDS,
+    DEFAULT_LOG_LEVEL,
+    DEFAULT_REDIS_URL,
+    LOG_LEVEL_ENV,
+    REDIS_URL_ENV,
+)
 from leo_telemetry.decode.redis_decoded_queue import RedisDecodedQueue
 from leo_telemetry.ingest.redis_dedup import RedisDedupQueue
 
@@ -27,10 +35,15 @@ logger = logging.getLogger(__name__)
 
 
 async def run() -> None:
-    logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+    logging.basicConfig(level=os.environ.get(LOG_LEVEL_ENV, DEFAULT_LOG_LEVEL))
 
-    poll_interval = float(os.environ.get("DECODE_POLL_INTERVAL_SECONDS", "2"))
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    poll_interval = float(
+        os.environ.get(
+            DECODE_POLL_INTERVAL_ENV,
+            str(DEFAULT_DECODE_POLL_INTERVAL_SECONDS),
+        )
+    )
+    redis_url = os.environ.get(REDIS_URL_ENV, DEFAULT_REDIS_URL)
 
     redis_client = Redis.from_url(redis_url)
     in_queue = RedisDedupQueue(redis_client)

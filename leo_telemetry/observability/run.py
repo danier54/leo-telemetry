@@ -27,7 +27,7 @@ from redis.asyncio import Redis
 from redis.asyncio import Redis as RedisClient
 
 from leo_telemetry.common.satellites import AUDIO_NORAD_IDS, NORAD_IDS
-from leo_telemetry.decode.redis_decoded_queue import QUEUE_KEY as DECODED_QUEUE_KEY
+from leo_telemetry.decode.constants import DECODED_QUEUE_KEY
 from leo_telemetry.demux.redis_telemetry_queue import QUEUE_KEY as TELEMETRY_QUEUE_KEY
 from leo_telemetry.demux.redis_telemetry_queue import RedisTelemetryQueue
 from leo_telemetry.ingest.redis_dedup import QUEUE_KEY as RAW_QUEUE_KEY
