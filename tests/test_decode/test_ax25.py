@@ -5,15 +5,51 @@ import pytest
 from leo_telemetry.common.models import RawFrame
 from leo_telemetry.decode.ax25 import decode_frame
 from leo_telemetry.decode.crc16 import crc16_ccitt, verify_fcs
+from leo_telemetry.decode.frame_sync import AX25_FLAG_BITS, extract_frames
 from tests.fixtures.golden_frames import load_golden_frames
 
 # Real captured frames to decode against -- see tests/fixtures/golden_frames.py
 GOLDEN_FRAMES = load_golden_frames()
 
 
-@pytest.mark.skip(reason="TODO: implement once frame sync is built")
 def test_decode_frame_strips_addressing_and_validates_crc():
-    ...
+    received_at = datetime(2026, 8, 8, tzinfo=timezone.utc)
+    payload = b"frame sync integration"
+    frame = _build_ax25_frame(
+        addresses=[
+            _shifted_address("CQ", 0, last=False),
+            _shifted_address("KJ6ABC", 0, last=True),
+        ],
+        control_pid=b"\x03\xf0",
+        info=payload,
+        append_fcs=True,
+    )
+    frame_bits = "".join(f"{byte:08b}"[::-1] for byte in frame)
+    stuffed_bits = _stuff_bits(frame_bits)
+
+    extracted = extract_frames(
+        AX25_FLAG_BITS + stuffed_bits + AX25_FLAG_BITS
+    )
+
+    assert extracted == [frame]
+    decoded = decode_frame(
+        RawFrame(
+            norad_id=25544,
+            observation_id=42,
+            observer_station_id=7,
+            received_at=received_at,
+            raw_bytes=extracted[0],
+        ),
+        has_fcs=True,
+    )
+
+    assert decoded is not None
+    assert decoded.norad_id == 25544
+    assert decoded.received_at == received_at
+    assert decoded.dest_callsign == "CQ"
+    assert decoded.src_callsign == "KJ6ABC"
+    assert decoded.payload == payload
+    assert decoded.crc_valid is True
 
 
 def test_verify_fcs_rejects_corrupted_frame():
@@ -50,6 +86,18 @@ def _shifted_address(callsign: str, ssid: int, *, last: bool) -> bytes:
     shifted = bytes((ord(c) << 1) for c in padded)
     ssid_byte = (ssid << 1) | 0x01 if last else (ssid << 1)
     return shifted + bytes([ssid_byte])
+
+
+def _stuff_bits(bits: str) -> str:
+    stuffed = ""
+    consecutive_ones = 0
+    for bit in bits:
+        stuffed += bit
+        consecutive_ones = consecutive_ones + 1 if bit == "1" else 0
+        if consecutive_ones == 5:
+            stuffed += "0"
+            consecutive_ones = 0
+    return stuffed
 
 
 def test_decode_frame_validates_fcs_when_has_fcs_true():
