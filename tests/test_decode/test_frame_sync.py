@@ -7,23 +7,12 @@ from leo_telemetry.decode.frame_sync import (
     extract_frames,
     find_frame_boundaries,
 )
-
-
-def _stuff(bits: str) -> str:
-    stuffed = ""
-    consecutive_ones = 0
-    for bit in bits:
-        stuffed += bit
-        consecutive_ones = consecutive_ones + 1 if bit == "1" else 0
-        if consecutive_ones == 5:
-            stuffed += "0"
-            consecutive_ones = 0
-    return stuffed
+from tests.test_decode.helpers import stuff_bits
 
 
 def test_extract_frame_from_hdlc_bitstream():
     body = b"\xffhello"
-    stuffed_bits = _stuff("".join(f"{byte:08b}"[::-1] for byte in body))
+    stuffed_bits = stuff_bits("".join(f"{byte:08b}"[::-1] for byte in body))
     stream = "111" + AX25_FLAG_BITS + stuffed_bits + AX25_FLAG_BITS + "000"
 
     assert find_frame_boundaries(stream) == [(11, 60)]
@@ -32,8 +21,8 @@ def test_extract_frame_from_hdlc_bitstream():
 
 
 def test_extract_multiple_frames_with_shared_flag():
-    first = _stuff("".join(f"{byte:08b}"[::-1] for byte in b"one"))
-    second = _stuff("".join(f"{byte:08b}"[::-1] for byte in b"two"))
+    first = stuff_bits("".join(f"{byte:08b}"[::-1] for byte in b"one"))
+    second = stuff_bits("".join(f"{byte:08b}"[::-1] for byte in b"two"))
 
     stream = AX25_FLAG_BITS + first + AX25_FLAG_BITS + second + AX25_FLAG_BITS
 
