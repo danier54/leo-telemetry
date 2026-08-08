@@ -1,17 +1,18 @@
+from datetime import datetime, timezone
+
 from fakeredis import FakeAsyncRedis
 
 from leo_telemetry.common.models import RawFrame
 from leo_telemetry.decode.redis_decoded_queue import RedisDecodedQueue
 from leo_telemetry.decode.run import _decode_once
 from leo_telemetry.ingest.redis_dedup import RedisDedupQueue
-from tests.test_decode.test_ax25 import _build_ax25_frame, _shifted_address
-from datetime import datetime, timezone
+from tests.test_decode.helpers import build_ax25_frame, shifted_address
 
 
 def _valid_raw_frame(observation_id: int = 1) -> RawFrame:
-    dest = _shifted_address("CQ", 0, last=False)
-    src = _shifted_address("KJ6ABC", 0, last=True)
-    frame_bytes = _build_ax25_frame(
+    dest = shifted_address("CQ", 0, last=False)
+    src = shifted_address("KJ6ABC", 0, last=True)
+    frame_bytes = build_ax25_frame(
         addresses=[dest, src], control_pid=b"\x03\xf0", info=b"hello", append_fcs=False
     )
     return RawFrame(
