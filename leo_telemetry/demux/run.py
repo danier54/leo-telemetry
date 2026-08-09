@@ -93,19 +93,12 @@ async def run(config: DemuxConfig | None = None) -> None:
         await redis_client.aclose()
 
 
-async def _demux_once(
-    in_queue: RedisDecodedQueue, 
-    out_queue: RedisTelemetryQueue,
-    dlq: DemuxDeadLetterQueue | None = None
-) -> bool:
+async def _demux_once(in_queue: RedisDecodedQueue, out_queue: RedisTelemetryQueue, dlq: DemuxDeadLetterQueue) -> bool:
     """Pop, demultiplex, and enqueue a single frame."""
     frame = await in_queue.pop()
     
     if frame is None:
         return False
-
-    # Fallback initialization if called without an explicit DLQ instance
-    target_dlq = dlq or DemuxDeadLetterQueue(in_queue._redis)
 
     try:
         reading = demultiplex(frame)
@@ -116,13 +109,17 @@ async def _demux_once(
             )
             return True
             
-    except Exception as exc:
+    except ValueError as exc:
         logger.exception(
             "Demuxer failed on frame from norad=%s; routing to DLQ.",
             getattr(frame, "norad_id", "unknown"),
         )
         failed_record = FailedDemuxFrame.from_exception(frame, exc)
-        await target_dlq.push(failed_record)
+        try:
+            await dlq.push(failed_record)
+        except Exception as dlq_exc:
+            # Swallow the error so a DLQ Redis failure does not crash the worker
+            logger.error("Failed to push to DLQ: %s", dlq_exc)
         return True
 
     await out_queue.push(reading)
