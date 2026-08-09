@@ -14,11 +14,14 @@ def bits_to_bytes(bits: str) -> bytes:
         raise ValueError("frame bit count must be a multiple of eight")
     if any(bit not in "01" for bit in bits):
         raise ValueError("bitstream must contain only '0' and '1'")
-    return bytes(int(bits[index:index + 8][::-1], 2) for index in range(0, len(bits), 8))
+    return bytes(
+        int(bits[index:index + 8][::-1], 2)
+        for index in range(0, len(bits), 8)
+    )
 
 
 def extract_frames(bits: str) -> list[bytes]:
-    """Extract, destuff, and pack all complete HDLC frames in a raw bitstream."""
+    """Extract, destuff, and pack complete frames from a raw bitstream."""
     frames: list[bytes] = []
     for start, end in find_frame_boundaries(bits):
         try:

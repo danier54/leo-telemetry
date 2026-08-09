@@ -43,6 +43,7 @@ def main() -> None:
     commands = [
         ([sys.executable, "-m", "leo_telemetry.ingest.run"], Path("/tmp/leo-ingest.log")),
         ([sys.executable, "-m", "leo_telemetry.decode.run"], Path("/tmp/leo-decode.log")),
+        ([sys.executable, "-m", "leo_telemetry.decode.audio_run"], Path("/tmp/leo-audio-decode.log")),
         ([sys.executable, "-m", "leo_telemetry.demux.run"], Path("/tmp/leo-demux.log")),
         ([sys.executable, "scripts/live_dashboard.py"], Path("/tmp/leo-exporter.log")),
     ]
