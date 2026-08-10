@@ -1,7 +1,10 @@
 """CRC-16 Frame Check Sequence validation."""
 
 from __future__ import annotations
+
 from crccheck.crc import Crc16X25
+
+from leo_telemetry.decode.constants import AX25_FCS_BYTES, MIN_FCS_FRAME_BYTES
 
 
 def crc16_ccitt(data: bytes) -> int:
@@ -20,11 +23,13 @@ def verify_fcs(frame: bytes) -> bool:
 
     Returns True if valid, False if too short or otherwise malformed
     """
-    if len(frame) < 3:  # need at least 1 byte of data + 2 FCS bytes
+    if len(frame) < MIN_FCS_FRAME_BYTES:
         return False
 
-    payload = frame[:-2]
-    received_fcs = int.from_bytes(frame[-2:], byteorder="little")
+    payload = frame[:-AX25_FCS_BYTES]
+    received_fcs = int.from_bytes(
+        frame[-AX25_FCS_BYTES:], byteorder="little"
+    )
     computed_fcs = crc16_ccitt(payload)
 
     return computed_fcs == received_fcs
