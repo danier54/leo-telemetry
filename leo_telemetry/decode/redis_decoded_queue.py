@@ -14,12 +14,22 @@ import pickle
 from redis.asyncio import Redis
 
 from leo_telemetry.common.models import DecodedFrame
+from leo_telemetry.decode.constants import (
+    DECODED_QUEUE_KEY,
+    DEFAULT_DECODED_QUEUE_SIZE,
+)
 
-QUEUE_KEY = "leo_telemetry:decode:queue"
+# Backwards-compatible public name used by observability and existing callers.
+QUEUE_KEY = DECODED_QUEUE_KEY
 
 
 class RedisDecodedQueue:
-    def __init__(self, redis_client: Redis, *, max_queue_size: int = 5000):
+    def __init__(
+        self,
+        redis_client: Redis,
+        *,
+        max_queue_size: int = DEFAULT_DECODED_QUEUE_SIZE,
+    ):
         self._redis = redis_client
         self._max_queue_size = max_queue_size
 

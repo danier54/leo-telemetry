@@ -1,9 +1,10 @@
 image:
   repository: ghcr.io/danier54/leo-telemetry-ingest
-  tag: 5e4a48715b55e857b794cfbd7736b5747b4cc995
+  tag: 650f9318318c6f4c66d6146e1afeefd5f50bef17
 config:
   logLevel: "INFO"
   decodePollIntervalSeconds: "2"
+  audioDecodePollIntervalSeconds: "2"
 resources:
   requests:
     cpu: 25m
@@ -11,3 +12,10 @@ resources:
   limits:
     cpu: 100m
     memory: 128Mi
+audioResources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi

@@ -7,6 +7,7 @@ from fakeredis import FakeAsyncRedis
 
 from leo_telemetry.common.models import TelemetryMetric, TelemetryReading
 from leo_telemetry.demux.redis_telemetry_queue import RedisTelemetryQueue
+from leo_telemetry.ingest.redis_audio_queue import QUEUE_KEY as AUDIO_QUEUE_KEY
 from leo_telemetry.observability import run as run_module
 from leo_telemetry.observability.last_readings import LastReadingStore
 from leo_telemetry.observability.metrics import REGISTRY
@@ -96,7 +97,9 @@ async def test_replay_restores_gauges_without_counting_readings():
     await store.save(_reading())
     labels = {"norad_id": "31130", "satellite": "CAPE-1"}
     count_before = (
-        REGISTRY.get_sample_value("leo_telemetry_readings_total", labels) or 0.0
+        REGISTRY.get_sample_value(
+            "leo_telemetry_readings_total", labels
+        ) or 0.0
     )
 
     await _replay_persisted_readings(store)
@@ -106,7 +109,9 @@ async def test_replay_restores_gauges_without_counting_readings():
         {**labels, "name": "battery_1_voltage", "unit": "V"},
     )
     assert value == 4.1
-    count_after = REGISTRY.get_sample_value("leo_telemetry_readings_total", labels)
+    count_after = REGISTRY.get_sample_value(
+        "leo_telemetry_readings_total", labels
+    )
     assert count_after == count_before  # replay must not inflate throughput
 
 
@@ -114,10 +119,17 @@ async def test_update_queue_depths_reports_every_stage():
     redis_client = FakeAsyncRedis()
     queue = RedisTelemetryQueue(redis_client)
     await queue.push(_reading())
+    await redis_client.rpush(AUDIO_QUEUE_KEY, b"queued audio observation")
 
     await _update_queue_depths(redis_client)
 
-    for queue_name, expected in (("raw", 0.0), ("decoded", 0.0), ("telemetry", 1.0)):
+    expected_depths = (
+        ("raw", 0.0),
+        ("audio", 1.0),
+        ("decoded", 0.0),
+        ("telemetry", 1.0),
+    )
+    for queue_name, expected in expected_depths:
         depth = REGISTRY.get_sample_value(
             "leo_telemetry_queue_depth", {"queue": queue_name}
         )

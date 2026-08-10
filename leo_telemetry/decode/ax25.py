@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 from leo_telemetry.common.models import DecodedFrame, RawFrame
+from leo_telemetry.decode.constants import (
+    AX25_ADDRESS_BYTE_SHIFT,
+    AX25_ADDRESS_BYTES,
+    AX25_ADDRESS_EXTENSION_BIT,
+    AX25_CALLSIGN_BYTES,
+    AX25_CONTROL_AND_PID_BYTES,
+    AX25_FCS_BYTES,
+    AX25_MIN_ADDRESS_FIELDS,
+    CW_NORAD_IDS,
+    MIN_FRAME_BYTES,
+)
 from leo_telemetry.decode.crc16 import verify_fcs
-from leo_telemetry.decode.cw import CW_NORAD_IDS, decode_cw_beacon
-
-# Shortest possible AX.25 frame: two 7-byte addresses plus a 1-byte
-# control field. Anything shorter can't hold real addressing.
-MIN_FRAME_BYTES = 15
-AX25_ADDR_LEN = 7
-AX25_CTRL_PID_LEN = 2
+from leo_telemetry.decode.cw import decode_cw_beacon
 
 
 def decode_address(address_bytes: bytes | memoryview) -> str:
@@ -20,8 +25,11 @@ def decode_address(address_bytes: bytes | memoryview) -> str:
 
     Returns ASCII string from shifted bytes
     """
-    return bytes(byte >> 1 for byte in address_bytes[:6])\
-        .decode("ascii").strip()
+    callsign = bytes(
+        byte >> AX25_ADDRESS_BYTE_SHIFT
+        for byte in address_bytes[:AX25_CALLSIGN_BYTES]
+    )
+    return callsign.decode("ascii").strip()
 
 
 def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
@@ -66,12 +74,11 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     i = 0
     found_last_address = False
 
-    while i + AX25_ADDR_LEN <= len(buffer):
-        chunk = buffer[i:i + AX25_ADDR_LEN]   # AX.25 callsigns are always 7 bytes long
+    while i + AX25_ADDRESS_BYTES <= len(buffer):
+        chunk = buffer[i:i + AX25_ADDRESS_BYTES]
         addresses.append(decode_address(chunk))
-        i += AX25_ADDR_LEN
-        
-        if chunk[6] & 0x01:     # extension bit set: this was the last address field
+        i += AX25_ADDRESS_BYTES
+        if chunk[-1] & AX25_ADDRESS_EXTENSION_BIT:
             found_last_address = True
             break               # stop -- reached end of the address list
         # extension bit clear: more address fields follow, keep reading them
@@ -79,17 +86,22 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     # Running out of buffer without ever seeing the extension bit means the
     # "addresses" we collected aren't real AX.25 addresses at all -- reject
     # rather than build a frame out of whatever we happened to slice off.
-    if not found_last_address or len(addresses) < 2:
+    if not found_last_address or len(addresses) < AX25_MIN_ADDRESS_FIELDS:
         return None
 
-    payload_end = -2 if has_fcs else None
-    payload = raw.raw_bytes[i + AX25_CTRL_PID_LEN:payload_end]
+    dest_callsign = addresses[0]
+    src_callsign = addresses[1]
+    payload_start = i + AX25_CONTROL_AND_PID_BYTES
+    if has_fcs:
+        payload = raw.raw_bytes[payload_start:-AX25_FCS_BYTES]
+    else:
+        payload = raw.raw_bytes[payload_start:]
 
     return DecodedFrame(
         norad_id=raw.norad_id,
         received_at=raw.received_at,
-        src_callsign=addresses[1],
-        dest_callsign=addresses[0],
+        src_callsign=src_callsign,
+        dest_callsign=dest_callsign,
         payload=payload,
-        crc_valid=True,  # the CRC validity is already checked above, so we can safely set this to True
+        crc_valid=crc_valid,
     )

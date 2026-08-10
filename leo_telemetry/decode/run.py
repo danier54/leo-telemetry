@@ -1,12 +1,13 @@
-"""Long-running decode service: drain the ingest Redis queue, run each
-RawFrame through the AX.25 decoder, and push successfully decoded frames
-onto a second Redis queue for demux.
+"""Long-running decode service for already-extracted byte frames.
+
+Audio observations are deliberately handled by ``decode.audio_run`` so a
+CPU-heavy recording cannot delay this worker's raw-frame queue.
 
 Configured entirely via environment variables so it runs unmodified as a
 container:
 
-    REDIS_URL                     Redis connection URL (default: redis://localhost:6379/0)
-    DECODE_POLL_INTERVAL_SECONDS  seconds to sleep when the input queue is empty (default: 2)
+    REDIS_URL                     Redis URL (default: redis://localhost:6379/0)
+    DECODE_POLL_INTERVAL_SECONDS  idle queue sleep duration (default: 2)
     LOG_LEVEL                     Python logging level name (default: INFO)
 """
 
@@ -20,6 +21,14 @@ import signal
 from redis.asyncio import Redis
 
 from leo_telemetry.decode.ax25 import decode_frame
+from leo_telemetry.decode.constants import (
+    DECODE_POLL_INTERVAL_ENV,
+    DEFAULT_DECODE_POLL_INTERVAL_SECONDS,
+    DEFAULT_LOG_LEVEL,
+    DEFAULT_REDIS_URL,
+    LOG_LEVEL_ENV,
+    REDIS_URL_ENV,
+)
 from leo_telemetry.decode.redis_decoded_queue import RedisDecodedQueue
 from leo_telemetry.ingest.redis_dedup import RedisDedupQueue
 
@@ -27,10 +36,15 @@ logger = logging.getLogger(__name__)
 
 
 async def run() -> None:
-    logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+    logging.basicConfig(level=os.environ.get(LOG_LEVEL_ENV, DEFAULT_LOG_LEVEL))
 
-    poll_interval = float(os.environ.get("DECODE_POLL_INTERVAL_SECONDS", "2"))
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    poll_interval = float(
+        os.environ.get(
+            DECODE_POLL_INTERVAL_ENV,
+            str(DEFAULT_DECODE_POLL_INTERVAL_SECONDS),
+        )
+    )
+    redis_url = os.environ.get(REDIS_URL_ENV, DEFAULT_REDIS_URL)
 
     redis_client = Redis.from_url(redis_url)
     in_queue = RedisDedupQueue(redis_client)
@@ -46,14 +60,18 @@ async def run() -> None:
             decoded = await _decode_once(in_queue, out_queue)
             if not decoded:
                 try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=poll_interval)
+                    await asyncio.wait_for(
+                        stop_event.wait(), timeout=poll_interval
+                    )
                 except asyncio.TimeoutError:
                     pass
     finally:
         await redis_client.aclose()
 
 
-async def _decode_once(in_queue: RedisDedupQueue, out_queue: RedisDecodedQueue) -> bool:
+async def _decode_once(
+    in_queue: RedisDedupQueue, out_queue: RedisDecodedQueue
+) -> bool:
     """Pop and decode one raw frame. Returns True if a frame was popped
     (so the caller can skip the poll-interval sleep while draining a
     backlog, instead of waiting between every single frame).
@@ -65,7 +83,10 @@ async def _decode_once(in_queue: RedisDedupQueue, out_queue: RedisDecodedQueue) 
     try:
         result = decode_frame(frame)
     except Exception:
-        logger.exception("Decoder raised on frame from norad=%s, dropping", frame.norad_id)
+        logger.exception(
+            "Decoder raised on frame from norad=%s, dropping",
+            frame.norad_id,
+        )
         return True
 
     if result is None:
@@ -75,7 +96,10 @@ async def _decode_once(in_queue: RedisDedupQueue, out_queue: RedisDecodedQueue) 
     await out_queue.push(result)
     logger.info(
         "Decoded frame norad=%s src=%s dest=%s crc_valid=%s",
-        result.norad_id, result.src_callsign, result.dest_callsign, result.crc_valid,
+        result.norad_id,
+        result.src_callsign,
+        result.dest_callsign,
+        result.crc_valid,
     )
     return True
 

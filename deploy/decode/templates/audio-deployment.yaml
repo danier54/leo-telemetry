@@ -1,28 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demux
+  name: audio-decode
   namespace: leo-telemetry
   labels:
-    {{- include "demux.labels" . | nindent 4 }}
-    app: demux
+    {{- include "decode.labels" . | nindent 4 }}
+    app: audio-decode
 spec:
   replicas: 1
-  revisionHistoryLimit: 3
   selector:
     matchLabels:
-      app: demux
+      app: audio-decode
   template:
     metadata:
       labels:
-        app: demux
+        app: audio-decode
     spec:
       containers:
-        - name: demux
+        - name: audio-decode
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          command: ["python", "-m", "leo_telemetry.demux.run"]
+          command: ["python", "-m", "leo_telemetry.decode.audio_run"]
           envFrom:
             - configMapRef:
-                name: demux-config
+                name: decode-config
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.audioResources | nindent 12 }}
