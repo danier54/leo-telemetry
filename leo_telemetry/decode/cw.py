@@ -22,9 +22,11 @@ from leo_telemetry.decode.constants import (
     CW_HEX_DIGITS,
     CW_MIN_BEACON_CHARS,
     CW_MIN_HEX_CHARS,
-    CW_NORAD_IDS as CW_NORAD_IDS,
+    CW_NORAD_IDS,
     CW_PACKET_TYPES,
 )
+
+__all__ = ["CW_NORAD_IDS", "decode_cw_beacon"]
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ def decode_cw_beacon(raw: RawFrame) -> DecodedFrame | None:
 
     # Keep the maximal run of hex characters after the type digit; a CW
     # decoder often trails off into noise mid-beacon.
-    fields = beacon[len(CW_CALLSIGN) + 1 :]
+    fields = beacon[len(CW_CALLSIGN) + 1:]
     hex_run = 0
     while hex_run < len(fields) and fields[hex_run] in CW_HEX_DIGITS:
         hex_run += 1

@@ -1,13 +1,15 @@
 from datetime import datetime, timezone
 
-import pytest
-
 from leo_telemetry.common.models import RawFrame
 from leo_telemetry.decode.ax25 import decode_frame
 from leo_telemetry.decode.crc16 import crc16_ccitt, verify_fcs
 from leo_telemetry.decode.frame_sync import AX25_FLAG_BITS, extract_frames
 from tests.fixtures.golden_frames import load_golden_frames
-from tests.test_decode.helpers import build_ax25_frame, shifted_address, stuff_bits
+from tests.test_decode.helpers import (
+    build_ax25_frame,
+    shifted_address,
+    stuff_bits,
+)
 
 # Real captured frames to decode against -- see tests/fixtures/golden_frames.py
 GOLDEN_FRAMES = load_golden_frames()
@@ -77,7 +79,10 @@ def test_decode_frame_validates_fcs_when_has_fcs_true():
     dest = shifted_address("CQ", 0, last=False)
     src = shifted_address("KJ6ABC", 0, last=True)
     frame_bytes = build_ax25_frame(
-        addresses=[dest, src], control_pid=b"\x03\xf0", info=b"hello", append_fcs=True
+        addresses=[dest, src],
+        control_pid=b"\x03\xf0",
+        info=b"hello",
+        append_fcs=True,
     )
     raw = RawFrame(
         norad_id=25544,
@@ -96,8 +101,13 @@ def test_decode_frame_validates_fcs_when_has_fcs_true():
     corrupted = bytearray(frame_bytes)
     corrupted[-3] ^= 0xFF
     assert decode_frame(
-        RawFrame(norad_id=25544, observation_id=2, observer_station_id=1,
-                  received_at=datetime.now(timezone.utc), raw_bytes=bytes(corrupted)),
+        RawFrame(
+            norad_id=25544,
+            observation_id=2,
+            observer_station_id=1,
+            received_at=datetime.now(timezone.utc),
+            raw_bytes=bytes(corrupted),
+        ),
         has_fcs=True,
     ) is None
 

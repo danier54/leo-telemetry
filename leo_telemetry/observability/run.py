@@ -28,16 +28,23 @@ from redis.asyncio import Redis as RedisClient
 
 from leo_telemetry.common.satellites import AUDIO_NORAD_IDS, NORAD_IDS
 from leo_telemetry.decode.constants import DECODED_QUEUE_KEY
-from leo_telemetry.demux.redis_telemetry_queue import QUEUE_KEY as TELEMETRY_QUEUE_KEY
+from leo_telemetry.demux.redis_telemetry_queue import (
+    QUEUE_KEY as TELEMETRY_QUEUE_KEY,
+)
 from leo_telemetry.demux.redis_telemetry_queue import RedisTelemetryQueue
+from leo_telemetry.ingest.redis_audio_queue import QUEUE_KEY as AUDIO_QUEUE_KEY
 from leo_telemetry.ingest.redis_dedup import QUEUE_KEY as RAW_QUEUE_KEY
 from leo_telemetry.observability.exporter import export, start_scrape_endpoint
 from leo_telemetry.observability.last_readings import LastReadingStore
 from leo_telemetry.observability.metrics import QUEUE_DEPTH
-from leo_telemetry.observability.tracking import fetch_tle, update_position_metrics
+from leo_telemetry.observability.tracking import (
+    fetch_tle,
+    update_position_metrics,
+)
 
 _QUEUE_KEYS = {
     "raw": RAW_QUEUE_KEY,
+    "audio": AUDIO_QUEUE_KEY,
     "decoded": DECODED_QUEUE_KEY,
     "telemetry": TELEMETRY_QUEUE_KEY,
 }
@@ -127,7 +134,9 @@ async def _replay_persisted_readings(store: LastReadingStore) -> None:
         )
 
 
-async def _track_positions(config: ObservabilityConfig, stop_event: asyncio.Event) -> None:
+async def _track_positions(
+    config: ObservabilityConfig, stop_event: asyncio.Event
+) -> None:
     """Refresh TLEs periodically and re-propagate satellite positions.
 
     Tracking is best-effort: satellites without published TLEs (or during
@@ -145,14 +154,17 @@ async def _track_positions(config: ObservabilityConfig, stop_event: asyncio.Even
                     if tle is not None:
                         tles[norad_id] = tle
                 last_refresh = now
-                logger.info("TLE refresh complete; tracking %d satellites", len(tles))
+                logger.info(
+                    "TLE refresh complete; tracking %d satellites", len(tles)
+                )
 
             for norad_id, tle in tles.items():
                 try:
                     update_position_metrics(norad_id, tle)
                 except Exception:
                     logger.exception(
-                        "Position update failed for norad=%s; will retry", norad_id
+                        "Position update failed for norad=%s; will retry",
+                        norad_id,
                     )
 
             try:
