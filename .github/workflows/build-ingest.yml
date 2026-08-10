@@ -15,6 +15,13 @@ permissions:
   packages: write
   pull-requests: write
 
+# Only the newest main build should pin a deployment image. Without this,
+# overlapping runs create PRs that edit the same image.tag fields and the
+# older PR can conflict after the newer one merges.
+concurrency:
+  group: build-ingest-main
+  cancel-in-progress: true
+
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/leo-telemetry-ingest
 
@@ -38,7 +45,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          # Build and tag exactly the commit that triggered this run.
+          ref: ${{ github.sha }}
 
       - uses: docker/setup-buildx-action@v3
 
@@ -63,6 +71,11 @@ jobs:
           curl -sL "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64" -o yq
           chmod +x yq
           sudo mv yq /usr/local/bin/yq
+
+      - name: Base the manifest update on the latest main
+        run: |
+          git fetch origin main
+          git checkout --detach origin/main
 
       - name: Pin the deployed image to this commit
         run: |
