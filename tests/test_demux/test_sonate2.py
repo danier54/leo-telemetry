@@ -84,8 +84,11 @@ def _pack_bits(total_bytes: int, fields: list[tuple[int, int, int]]) -> bytes:
     return bytes(buf)
 
 
-def _mem_ops_hk_frame(*, vcid: int = 0) -> bytes:
+def _mem_ops_hk_frame(*, vcid: int = 1) -> bytes:
     """Build a synthetic TF carrying APID 105 (OBDH EXT MEM OPS HK, 10B).
+
+    Defaults to VCID 1 (Online Extended Housekeeping) -- APID 105 is an
+    "EXT" APID, so unlike APID 100 it's only valid on VCID 1/3, not 0/2.
 
     Channel 1 and channel 4 (bit offsets 0 and 60, the first and last of
     the four 20-bit repeating blocks) are populated with distinct values
@@ -140,6 +143,14 @@ def test_mem_ops_hk_decodes_all_four_obdh_channels():
     assert by_name["obdh3_mem_ops_state"].value == 0.0
 
 
-def test_mem_ops_hk_rejects_non_housekeeping_vcid():
+def test_mem_ops_hk_accepts_offline_extended_vcid():
+    # VCID 3 (Offline Extended HK) is the other half of the valid pair.
+    metrics = demultiplex_payload(_mem_ops_hk_frame(vcid=3))
+    assert len(metrics) == 20
+
+
+def test_mem_ops_hk_rejects_standard_housekeeping_vcid():
+    # APID 105 is Extended HK-only; VCID 0 is a Standard HK channel, so
+    # this APID/VCID combination can never legitimately occur.
     with pytest.raises(ValueError):
-        demultiplex_payload(_mem_ops_hk_frame(vcid=1))
+        demultiplex_payload(_mem_ops_hk_frame(vcid=0))

@@ -9,16 +9,20 @@ The AX.25 information field carries a CCSDS TM Transfer Frame:
     TFHead (6B) | Space Packet: SPHead (6B) + secondary header (5B) +
     DATA (per APID) | ... | FECF CRC-16 (2B)
 
-Only virtual channels 0 and 2 (Standard Housekeeping) are demultiplexed;
-other channels carry extended housekeeping or binary downloads and are
-dropped. Field bit positions and calibration polynomials below are
-transcribed from the DATA definition sheet. Two APIDs are registered:
+Virtual channels 0/2 carry Standard Housekeeping and 1/3 carry Extended
+Housekeeping (VCID meanings per the General sheet); binary-download
+channels 4-7 are dropped. Each registered APID is only valid on its own
+housekeeping channel pair, checked below. Field bit positions and
+calibration polynomials are transcribed from the DATA definition sheet.
+Two APIDs are registered:
 
     100  STD HK       -- power, battery, and radio health (the frequent
                           beacon; this is what the dashboard's readiness
-                          score is computed from)
+                          score is computed from). VCID 0/2 only.
     105  OBDH EXT MEM OPS HK -- onboard-computer memory operation status
-                          for each of the four redundant OBDH channels
+                          for each of the four redundant OBDH channels.
+                          VCID 1/3 only (it's an "EXT" -- Extended
+                          Housekeeping -- APID, not Standard).
 
 Other APIDs (extended error codes, memory status, LEOP housekeeping, and
 so on) are not yet mapped; demultiplex_payload() raises ValueError for
@@ -33,6 +37,7 @@ TF_HEADER_LEN = 6
 SP_HEADER_LEN = 6
 SECONDARY_HEADER_LEN = 5
 STD_HK_VCIDS = (0, 2)
+EXT_HK_VCIDS = (1, 3)
 MIN_TF_LEN = TF_HEADER_LEN + SP_HEADER_LEN + SECONDARY_HEADER_LEN + 2
 
 APID_STD_HK = 100
@@ -91,6 +96,14 @@ _APID_FIELDS: dict[int, tuple[_Field, ...]] = {
     APID_MEM_OPS_HK: _MEM_OPS_HK_FIELDS,
 }
 
+# Each APID only appears on its own housekeeping channel pair -- Standard
+# HK APIDs on VCID 0/2, Extended HK APIDs (like the mem-ops block) on
+# VCID 1/3. Checked in demultiplex_payload() once the APID is known.
+_APID_VCIDS: dict[int, tuple[int, ...]] = {
+    APID_STD_HK: STD_HK_VCIDS,
+    APID_MEM_OPS_HK: EXT_HK_VCIDS,
+}
+
 
 def _extract_bits(data: memoryview, bit_pos: int, bit_len: int) -> int:
     """Read an MSB-first big-endian bit field, per CCSDS conventions."""
@@ -109,11 +122,11 @@ def _extract_bits(data: memoryview, bit_pos: int, bit_len: int) -> int:
 
 def _decode_fields(data: memoryview, fields: tuple[_Field, ...]) -> tuple[TelemetryMetric, ...]:
     """Apply each field's calibration polynomial and return typed metrics."""
-    metrics = []
-    for name, unit, bit_pos, bit_len, (c0, c1, c2), scale in fields:
-        x = float(_extract_bits(data, bit_pos, bit_len))
-        metrics.append(TelemetryMetric(name, (c0 + c1 * x + c2 * x * x) * scale, unit))
-    return tuple(metrics)
+    return tuple(
+        TelemetryMetric(name, (c0 + c1 * x + c2 * x * x) * scale, unit)
+        for name, unit, bit_pos, bit_len, (c0, c1, c2), scale in fields
+        for x in (float(_extract_bits(data, bit_pos, bit_len)),)
+    )
 
 
 def demultiplex_payload(payload: bytes | memoryview) -> tuple[TelemetryMetric, ...]:
@@ -123,8 +136,6 @@ def demultiplex_payload(payload: bytes | memoryview) -> tuple[TelemetryMetric, .
         raise ValueError("SONATE-2 transfer frame shorter than minimum layout.")
 
     vcid = (view[1] >> 1) & 0x7
-    if vcid not in STD_HK_VCIDS:
-        raise ValueError(f"SONATE-2 VCID {vcid} is not standard housekeeping.")
 
     first_header_pointer = ((view[4] & 0x07) << 8) | view[5]
     packet_start = TF_HEADER_LEN + first_header_pointer
@@ -136,6 +147,11 @@ def demultiplex_payload(payload: bytes | memoryview) -> tuple[TelemetryMetric, .
     fields = _APID_FIELDS.get(apid)
     if fields is None:
         raise ValueError(f"SONATE-2 APID {apid} has no registered field map.")
+
+    # VCID validity depends on which APID we found -- Standard HK APIDs
+    # only appear on VCID 0/2, Extended HK APIDs only on VCID 1/3.
+    if vcid not in _APID_VCIDS[apid]:
+        raise ValueError(f"SONATE-2 APID {apid} is not expected on VCID {vcid}.")
 
     data = sp[SP_HEADER_LEN + SECONDARY_HEADER_LEN :]
     return _decode_fields(data, fields)
