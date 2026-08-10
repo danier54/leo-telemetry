@@ -5,6 +5,7 @@ config:
   logLevel: "INFO"
   demuxPollIntervalSeconds: "2.0"
   demuxMaxQueueSize: "5000"
+  demuxDlqMaxSize: "1000"
 resources:
   requests:
     cpu: 25m

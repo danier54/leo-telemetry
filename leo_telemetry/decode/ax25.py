@@ -53,7 +53,6 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
 
     Returns None if the frame is malformed or fails FCS validation.
     """
-
     if raw is None:
         return None
 
@@ -66,13 +65,10 @@ def decode_frame(raw: RawFrame, *, has_fcs: bool = False) -> \
     if len(raw.raw_bytes) < MIN_FRAME_BYTES:
         return None
 
-    if has_fcs:
-        crc_valid = verify_fcs(raw.raw_bytes)
-        if not crc_valid:
-            return None
-    else:
-        crc_valid = True  # SatNOGS DB already validated/stripped the FCS
+    if has_fcs and not verify_fcs(raw.raw_bytes):
+        return None
 
+    # Parse addresses
     buffer = memoryview(raw.raw_bytes)
     addresses: list[str] = []
     i = 0
