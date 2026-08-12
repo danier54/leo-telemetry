@@ -5,7 +5,7 @@ public API, decodes the downlink (AX.25 data-link frames, CW beacons, APRS),
 demultiplexes payloads into typed physical measurements, and visualizes fleet
 health in Grafana.
 
-Live dashboard: https://dell-node2.tail34280b.ts.net/d/leo-overview
+Live dashboard: https://dell-node2.tail34280b.ts.net:10000/d/leo-overview
 (read-only, no login needed).
 
 ## Structure
@@ -68,7 +68,8 @@ position map with 6h ground tracks, orbital state, altitude, readiness
 scores, telemetry history from both Prometheus and the Postgres
 archive, pipeline queue depths) and a templated per-satellite
 drill-down. The public URL is served through a Tailscale Funnel on the
-cluster host; anonymous visitors are read-only viewers.
+cluster host (port 10000 — 443 and 8443 are both already claimed by other
+services on that host); anonymous visitors are read-only viewers.
 
 ## Deploys
 
